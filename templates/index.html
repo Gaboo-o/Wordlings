@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<a href="{{ url_for('add_word') }}" class="btn btn-primary mb-3">Add Word</a>
+<table class="table table-bordered">
+  <tr><th>Word</th><th>Definition</th><th>Examples</th><th>Actions</th></tr>
+  {% for w in words %}
+  <tr>
+    <td>{{ w.word }}</td>
+    <td>{{ w.definition }}</td>
+    <td>{{ w.examples }}</td>
+    <td><a href="{{ url_for('delete_word', id=w.id) }}" class="btn btn-danger btn-sm">Delete</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}
