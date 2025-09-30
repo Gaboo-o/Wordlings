@@ -5,7 +5,15 @@
   <tr><th>Word</th><th>Definition</th><th>Examples</th><th>Actions</th></tr>
   {% for w in words %}
   <tr>
-    <td>{{ w.word }}</td>
+    <td>
+      <ul>
+  {% for word in words %}
+    <li>
+      <a href="{{ url_for('view_word', id=word.id) }}">{{ word.word }}</a>
+    </li>
+  {% endfor %}
+</ul>
+    </td>
     <td>{{ w.definition }}</td>
     <td>{{ w.examples }}</td>
     <td><a href="{{ url_for('delete_word', id=w.id) }}" class="btn btn-danger btn-sm">Delete</a></td>
