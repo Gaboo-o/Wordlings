@@ -39,5 +39,11 @@ def delete_word(id):
     db.session.commit()
     return redirect(url_for('index'))
 
+@app.route('/word/<int:id>')
+def view_word(id):
+    word = Word.query.get_or_404(id)
+    return render_template('view_word.html', word=word)
+
+
 if __name__ == '__main__':
     app.run(debug=True)
