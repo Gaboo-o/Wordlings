@@ -42,7 +42,7 @@ def delete_word(id):
 @app.route('/word/<int:id>')
 def view_word(id):
     word = Word.query.get_or_404(id)
-    return render_template('view_word.html', word=word)
+    return render_template('word.html', word=word)
 
 if __name__ == '__main__':
     app.run(debug=True)

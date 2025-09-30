@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
+  <head>
     <title>{{ word.word }}</title>
-</head>
-<body>
+  </head>
+  <body>
     <h1>{{ word.word }}</h1>
     <p><strong>Definition:</strong> {{ word.definition }}</p>
     <p><strong>Examples:</strong> {{ word.examples }}</p>
 
     <a href="{{ url_for('index') }}">Back to Dictionary</a>
-</body>
+  </body>
 </html>
