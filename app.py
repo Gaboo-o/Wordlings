@@ -16,7 +16,7 @@ with app.app_context():
 
 @app.route('/')
 def index():
-    words = Word.query.all()
+    words = Word.query.order_by(Word.word.asc()).all()
     return render_template('index.html', words=words)
 
 @app.route('/add', methods=['GET', 'POST'])
@@ -43,6 +43,19 @@ def delete_word(id):
 def view_word(id):
     word = Word.query.get_or_404(id)
     return render_template('word.html', word=word)
+
+@app.route('/search')
+def search():
+    searchTerm = request.args.get('search')
+    if not searchTerm:
+        return redirect(url_for('index'))
+    results = Word.query.filter(
+        Word.word.contains(searchTerm) |
+        Word.definition.contains(searchTerm)
+    )
+    #.order_by(Word.word.asc()).all()
+    return render_template('index.html', words=results)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
