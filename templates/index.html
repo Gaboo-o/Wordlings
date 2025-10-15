@@ -1,8 +1,17 @@
-{% extends 'base.html' %}
-{% block content %}
+{% extends 'base.html' %} {% block content %}
+<form class="d-flex mb-3" method="GET" action="{{ url_for('search') }}">
+  <input class="form-control me-2" type="search" name="search" placeholder="Search words..." aria-label="Search">
+  <button class="btn btn-outline-primary" type="submit">Search</button>
+</form>
+
 <a href="{{ url_for('add_word') }}" class="btn btn-primary mb-3">Add Word</a>
 <table class="table table-bordered">
-  <tr><th>Word</th><th>Definition</th><th>Examples</th><th>Actions</th></tr>
+  <tr>
+    <th>Word</th>
+    <th>Definition</th>
+    <th>Examples</th>
+    <th>Actions</th>
+  </tr>
   {% for w in words %}
   <tr>
     <td>
@@ -16,7 +25,13 @@
     </td>
     <td>{{ w.definition }}</td>
     <td>{{ w.examples }}</td>
-    <td><a href="{{ url_for('delete_word', id=w.id) }}" class="btn btn-danger btn-sm">Delete</a></td>
+    <td>
+      <a
+        href="{{ url_for('delete_word', id=w.id) }}"
+        class="btn btn-danger btn-sm"
+        >Delete</a
+      >
+    </td>
   </tr>
   {% endfor %}
 </table>
