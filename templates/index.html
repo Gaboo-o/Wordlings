@@ -14,9 +14,7 @@
   </tr>
   {% for w in words %}
   <tr>
-    <td>
-        <a href="{{ url_for('view_word', id=w.id) }}">{{ w.word }}</a>
-    </td>
+    <td>{{ w.word }}</td>
     <td>{{ w.definition }}</td>
     <td>{{ w.examples }}</td>
     <td>
