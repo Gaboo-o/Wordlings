@@ -4,9 +4,10 @@ from flask_sqlalchemy import SQLAlchemy
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///dictionary.db'
 db = SQLAlchemy(app)
-upvotes = db.Column(db.Integer, default=0)
+
 
 class Word(db.Model):
+    upvotes = db.Column(db.Integer, default=0)
     id = db.Column(db.Integer, primary_key=True)
     word = db.Column(db.String(50), nullable=False)
     definition = db.Column(db.String(200))
