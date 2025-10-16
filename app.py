@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
+from rapidfuzz import fuzz, process
 #test
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///dictionary.db'
@@ -18,7 +19,11 @@ with app.app_context():
 
 @app.route('/')
 def index():
-    words = Word.query.order_by(Word.word.asc()).all()
+    sort_by = request.args.get('sort', 'alphabetical')
+    if sort_by == 'popular':
+        words = Word.query.order_by(Word.upvotes.desc()).all()
+    else:
+        words = Word.query.order_by(Word.word.asc()).all()
     return render_template('index.html', words=words)
 
 @app.route('/add', methods=['GET', 'POST'])
@@ -46,17 +51,37 @@ def view_word(id):
     word = Word.query.get_or_404(id)
     return render_template('word.html', word=word)
 
+
 @app.route('/search')
 def search():
     searchTerm = request.args.get('search')
+    sort_by = request.args.get('sort', 'alphabetical')  # 'popular' or 'alphabetical'
+
+    # If no search term, redirect to index
     if not searchTerm:
-        return redirect(url_for('index'))
-    results = Word.query.filter(
-        Word.word.contains(searchTerm) |
-        Word.definition.contains(searchTerm)
-    )
-    #.order_by(Word.word.asc()).all()
-    return render_template('index.html', words=results)
+        if sort_by == 'popular':
+            words = Word.query.order_by(Word.upvotes.desc()).all()
+        else:
+            words = Word.query.order_by(Word.word.asc()).all()
+        return render_template('index.html', words=words)
+
+    # Grab all words from DB
+    all_words = Word.query.all()
+    results = []
+
+    # Fuzzy match on both word and definition
+    for w in all_words:
+        score_word = fuzz.partial_ratio(searchTerm.lower(), w.word.lower())
+        score_def = fuzz.partial_ratio(searchTerm.lower(), (w.definition or '').lower())
+        score = max(score_word, score_def)
+        if score > 60:  # threshold (tweak this)
+            results.append((w, score))
+
+    # Sort by best match (and popularity if equal)
+    results.sort(key=lambda x: (x[1], x[0].upvotes), reverse=True)
+    matched_words = [r[0] for r in results]
+
+    return render_template('index.html', words=matched_words)
 
 @app.route('/upvote/<int:id>', methods=['POST'])
 def upvote(id):
