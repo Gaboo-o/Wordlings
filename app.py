@@ -1,21 +1,85 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from rapidfuzz import fuzz, process
+from pytrends.request import TrendReq
+import pandas as pd
+import plotly.express as px
+from datetime import datetime
+from flask import jsonify
+
 #test
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///dictionary.db'
 db = SQLAlchemy(app)
-
+pytrends = TrendReq(hl='en-US', tz=360)
 
 class Word(db.Model):
-    upvotes = db.Column(db.Integer, default=0)
     id = db.Column(db.Integer, primary_key=True)
     word = db.Column(db.String(50), nullable=False)
     definition = db.Column(db.String(200))
     examples = db.Column(db.String(500))
+    upvotes = db.Column(db.Integer, default=0)
+
+    # New fields for trends
+    trend_score = db.Column(db.Integer, default=0)
+    trend_country = db.Column(db.String(100))
+    trend_last_update = db.Column(db.DateTime)
 
 with app.app_context():
     db.create_all()
+
+
+
+def fetch_trends_for_word(word):
+    """Fetch and cache Google Trends data for a specific slang word."""
+    from datetime import datetime, timedelta
+
+    # Get from DB
+    db_word = Word.query.filter_by(word=word).first()
+    if not db_word:
+        return None
+
+    # Only refresh once every 24 hours
+    if db_word.trend_last_update and (datetime.utcnow() - db_word.trend_last_update).total_seconds() < 86400:
+        return db_word.trend_score, db_word.trend_country, None  # use cached data
+
+    try:
+        pytrends.build_payload([word], cat=0, timeframe='today 3-m', geo='', gprop='')
+
+        # Interest over time
+        interest = pytrends.interest_over_time()
+        if not interest.empty:
+            avg_score = int(interest[word].mean())
+        else:
+            avg_score = 0
+
+        # Regional interest
+        region_df = pytrends.interest_by_region(resolution='COUNTRY', inc_low_vol=True)
+        top_country = None
+        if not region_df.empty:
+            top_country = region_df[word].idxmax()
+
+        # Save to DB
+        db_word.trend_score = avg_score
+        db_word.trend_country = top_country
+        db_word.trend_last_update = datetime.utcnow()
+        db.session.commit()
+
+        # Make a graph
+        if not interest.empty:
+            fig = px.line(interest.reset_index(), x='date', y=word,
+                          title=f"Popularity Over Time: {word}",
+                          labels={word: "Popularity", "date": "Date"})
+            trend_chart_html = fig.to_html(full_html=False)
+        else:
+            trend_chart_html = None
+
+        return avg_score, top_country, trend_chart_html
+
+    except Exception as e:
+        print("Trend fetch error:", e)
+        return 0, None, None
+
 
 @app.route('/')
 def index():
@@ -49,7 +113,16 @@ def delete_word(id):
 @app.route('/word/<int:id>')
 def view_word(id):
     word = Word.query.get_or_404(id)
-    return render_template('word.html', word=word)
+    trend_score, top_country, trend_chart_html = fetch_trends_for_word(word.word)
+
+    return render_template(
+        'word.html',
+        word=word,
+        trend_score=trend_score,
+        top_country=top_country,
+        trend_chart_html=trend_chart_html
+    )
+
 
 
 @app.route('/search')
@@ -88,7 +161,71 @@ def upvote(id):
     word = Word.query.get_or_404(id)
     word.upvotes += 1
     db.session.commit()
-    return redirect(url_for('index'))
+
+    # Redirect back to where the upvote came from
+    referrer = request.referrer or url_for('index')
+    return redirect(referrer)
+
+
+@app.route('/api/upvote/<int:id>', methods=['POST'])
+def api_upvote(id):
+    word = Word.query.get_or_404(id)
+    word.upvotes += 1
+    db.session.commit()
+    return jsonify({'upvotes': word.upvotes})
+
+
+@app.route('/trends')
+def trends():
+    # Get slang words from your DB (limit to top 5 to keep performance fast)
+    words = [w.word for w in Word.query.limit(5).all()]
+    trend_data = []
+
+    # Store country data for mapping
+    country_data = pd.DataFrame()
+
+    for word in words:
+        try:
+            # Get search interest over time
+            pytrends.build_payload([word], cat=0, timeframe='today 3-m', geo='', gprop='')
+
+            # Average popularity score for ranking
+            interest = pytrends.interest_over_time()
+            if not interest.empty:
+                avg_score = int(interest[word].mean())
+                trend_data.append({'word': word, 'popularity': avg_score})
+
+            # Get regional interest
+            region_df = pytrends.interest_by_region(resolution='COUNTRY', inc_low_vol=True)
+            if not region_df.empty:
+                region_df = region_df.reset_index()[['geoName', word]]
+                region_df = region_df.rename(columns={'geoName': 'Country', word: 'Popularity'})
+                region_df['Slang'] = word
+                country_data = pd.concat([country_data, region_df])
+
+        except Exception as e:
+            print(f"Error fetching {word}: {e}")
+
+    # Sort by overall popularity
+    trend_data.sort(key=lambda x: x['popularity'], reverse=True)
+
+    # Build the map visualization if data exists
+    map_html = None
+    if not country_data.empty:
+        fig = px.choropleth(
+            country_data,
+            locations='Country',
+            locationmode='country names',
+            color='Popularity',
+            hover_name='Country',
+            animation_frame='Slang',
+            title='Slang Popularity by Country (Google Trends)',
+            color_continuous_scale='blues'
+        )
+        map_html = fig.to_html(full_html=False)
+
+    return render_template('trends.html', trends=trend_data, map_html=map_html)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

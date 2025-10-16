@@ -10,11 +10,6 @@
   <button class="btn btn-outline-primary" type="submit">Search</button>
 </form>
 
-<form class="d-flex mb-3" method="GET" action="{{ url_for('search') }}">
-  <input class="form-control me-2" type="search" name="search" placeholder="Search words..." aria-label="Search">
-  <button class="btn btn-outline-primary" type="submit">Search</button>
-</form>
-
 
 
 <a href="{{ url_for('add_word') }}" class="btn btn-primary mb-3">Add Word</a>
@@ -35,6 +30,7 @@
   <button class="btn btn-outline-success btn-sm" type="submit">👍 {{ w.upvotes }}</button>
 </form>
 
+<td><a href="{{ url_for('view_word', id=w.id) }}" class="text-decoration-none fw-bold">{{ w.word }}</a></td>
 
 
     </td>
