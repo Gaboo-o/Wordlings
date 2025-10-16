@@ -58,6 +58,12 @@ def search():
     #.order_by(Word.word.asc()).all()
     return render_template('index.html', words=results)
 
+@app.route('/upvote/<int:id>', methods=['POST'])
+def upvote(id):
+    word = Word.query.get_or_404(id)
+    word.upvotes += 1
+    db.session.commit()
+    return redirect(url_for('view_word', id=id))  # 👈 redirect back to word page
 
 if __name__ == '__main__':
     app.run(debug=True)
