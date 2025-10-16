@@ -63,7 +63,7 @@ def upvote(id):
     word = Word.query.get_or_404(id)
     word.upvotes += 1
     db.session.commit()
-    return redirect(url_for('view_word', id=id))  # 👈 redirect back to word page
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True)

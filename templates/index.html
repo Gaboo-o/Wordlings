@@ -18,6 +18,14 @@
     <td>{{ w.definition }}</td>
     <td>{{ w.examples }}</td>
     <td>
+      <form method="POST" action="{{ url_for('upvote', id=w.id) }}" style="display:inline;">
+  <button class="btn btn-outline-success btn-sm" type="submit">👍 {{ w.upvotes }}</button>
+</form>
+
+
+
+    </td>
+    <td>
       <a
         href="{{ url_for('delete_word', id=w.id) }}"
         class="btn btn-danger btn-sm"
