@@ -14,15 +14,7 @@
   </tr>
   {% for w in words %}
   <tr>
-    <td>
-      <ul>
-  {% for word in words %}
-    <li>
-      <a href="{{ url_for('view_word', id=word.id) }}">{{ word.word }}</a>
-    </li>
-  {% endfor %}
-</ul>
-    </td>
+    <td>{{ w.word }}</td>
     <td>{{ w.definition }}</td>
     <td>{{ w.examples }}</td>
     <td>
