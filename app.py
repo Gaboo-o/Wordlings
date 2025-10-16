@@ -1,11 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from rapidfuzz import fuzz, process
+from pytrends.request import TrendReq
+import pandas as pd
+import plotly.express as px
+
 #test
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///dictionary.db'
 db = SQLAlchemy(app)
-
+pytrends = TrendReq(hl='en-US', tz=360)
 
 class Word(db.Model):
     upvotes = db.Column(db.Integer, default=0)
@@ -89,6 +93,59 @@ def upvote(id):
     word.upvotes += 1
     db.session.commit()
     return redirect(url_for('index'))
+
+
+@app.route('/trends')
+def trends():
+    # Get slang words from your DB (limit to top 5 to keep performance fast)
+    words = [w.word for w in Word.query.limit(5).all()]
+    trend_data = []
+
+    # Store country data for mapping
+    country_data = pd.DataFrame()
+
+    for word in words:
+        try:
+            # Get search interest over time
+            pytrends.build_payload([word], cat=0, timeframe='today 3-m', geo='', gprop='')
+
+            # Average popularity score for ranking
+            interest = pytrends.interest_over_time()
+            if not interest.empty:
+                avg_score = int(interest[word].mean())
+                trend_data.append({'word': word, 'popularity': avg_score})
+
+            # Get regional interest
+            region_df = pytrends.interest_by_region(resolution='COUNTRY', inc_low_vol=True)
+            if not region_df.empty:
+                region_df = region_df.reset_index()[['geoName', word]]
+                region_df = region_df.rename(columns={'geoName': 'Country', word: 'Popularity'})
+                region_df['Slang'] = word
+                country_data = pd.concat([country_data, region_df])
+
+        except Exception as e:
+            print(f"Error fetching {word}: {e}")
+
+    # Sort by overall popularity
+    trend_data.sort(key=lambda x: x['popularity'], reverse=True)
+
+    # Build the map visualization if data exists
+    map_html = None
+    if not country_data.empty:
+        fig = px.choropleth(
+            country_data,
+            locations='Country',
+            locationmode='country names',
+            color='Popularity',
+            hover_name='Country',
+            animation_frame='Slang',
+            title='Slang Popularity by Country (Google Trends)',
+            color_continuous_scale='blues'
+        )
+        map_html = fig.to_html(full_html=False)
+
+    return render_template('trends.html', trends=trend_data, map_html=map_html)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
