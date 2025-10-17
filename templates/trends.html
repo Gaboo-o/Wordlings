@@ -1,5 +1,4 @@
-{% extends 'base.html' %}
-{% block content %}
+{% extends 'base.html' %} {% block content %}
 <h2>🌍 Global Slang Trends (via Google Trends)</h2>
 
 <table class="table table-striped">
@@ -22,5 +21,7 @@
 <p>No map data available yet. Try adding more words!</p>
 {% endif %}
 
-<a href="{{ url_for('index') }}" class="btn btn-secondary mt-3">Back to Dictionary</a>
+<a href="{{ url_for('index') }}" class="btn btn-secondary mt-3"
+  >Back to Dictionary</a
+>
 {% endblock %}

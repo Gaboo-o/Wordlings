@@ -14,7 +14,7 @@ env/
 .venv/
 
 # Databases
-#*.db
+*.db
 *.sqlite3
 
 # Logs

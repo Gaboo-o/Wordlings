@@ -12,11 +12,12 @@
     <h1 class="mb-4">Wordlings</h1>
 
     <nav class="mb-3">
-  <a href="{{ url_for('index') }}" class="btn btn-outline-primary me-2">Home</a>
-  <a href="{{ url_for('trends') }}" class="btn btn-outline-info">Trends</a>
-</nav>
+      <a href="{{ url_for('index') }}" class="btn btn-outline-primary me-2"
+        >Home</a
+      >
+      <a href="{{ url_for('trends') }}" class="btn btn-outline-info">Trends</a>
+    </nav>
 
     {% block content %}{% endblock %}
-
   </body>
 </html>

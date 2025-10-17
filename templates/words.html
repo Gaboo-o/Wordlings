@@ -1,9 +1,8 @@
-{% extends 'base.html' %}
-{% block content %}
+{% extends 'base.html' %} {% block content %}
 <div class="card shadow-lg p-4 rounded-4">
-  <h1 class="mb-3">{{ word.word }}
-    {% if trend_score > 70 %}
-      <span class="badge bg-warning text-dark ms-2">🔥 Trending</span>
+  <h1 class="mb-3">
+    {{ word.word }} {% if trend_score > 70 %}
+    <span class="badge bg-warning text-dark ms-2">🔥 Trending</span>
     {% endif %}
   </h1>
 
@@ -12,9 +11,7 @@
 
   {% if top_country %}
   <p><strong>Most Popular In:</strong> {{ top_country }}</p>
-  {% endif %}
-
-  {% if trend_chart_html %}
+  {% endif %} {% if trend_chart_html %}
   <h4 class="mt-4">📈 Popularity Over Time</h4>
   <div>{{ trend_chart_html|safe }}</div>
   {% else %}
@@ -27,24 +24,27 @@
     </button>
   </div>
 
-  <a href="{{ url_for('index') }}" class="btn btn-secondary mt-3">← Back to Dictionary</a>
+  <a href="{{ url_for('index') }}" class="btn btn-secondary mt-3"
+    >← Back to Dictionary</a
+  >
 </div>
 
 <script>
-document.getElementById("upvoteBtn").addEventListener("click", async function() {
-  const res = await fetch("/api/upvote/{{ word.id }}", { method: "POST" });
-  if (res.ok) {
-    const data = await res.json();
-    document.getElementById("upvoteCount").textContent = data.upvotes;
-  }
-});
+  document
+    .getElementById("upvoteBtn")
+    .addEventListener("click", async function () {
+      const res = await fetch("/api/upvote/{{ word.id }}", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        document.getElementById("upvoteCount").textContent = data.upvotes;
+      }
+    });
 </script>
 
 <style>
-#upvoteBtn:active {
-  transform: scale(1.1);
-  transition: transform 0.1s ease;
-}
+  #upvoteBtn:active {
+    transform: scale(1.1);
+    transition: transform 0.1s ease;
+  }
 </style>
 {% endblock %}
-
