@@ -116,7 +116,7 @@ def view_word(id):
     trend_score, top_country, trend_chart_html = fetch_trends_for_word(word.word)
 
     return render_template(
-        'word.html',
+        'words.html',
         word=word,
         trend_score=trend_score,
         top_country=top_country,
