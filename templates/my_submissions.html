@@ -1,0 +1,13 @@
+<h1>My Submissions</h1>
+
+{% if words %}
+  <ul>
+    {% for w in words %}
+      <li>
+        <strong>{{ w.word }}</strong> - Status: {{ w.status }}
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>You have not submitted any words yet.</p>
+{% endif %}

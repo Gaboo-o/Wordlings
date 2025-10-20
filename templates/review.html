@@ -1,0 +1,20 @@
+<h1>Pending Submissions</h1>
+
+{% if words %}
+  <ul>
+    {% for w in words %}
+        <li>
+            <strong>{{ w.word }}</strong> - {{ w.definition }}<br>
+            Submitted by: {{ w.submitted_by }}
+            <form action="{{ url_for('approve_word', id=w.id) }}" method="POST" style="display:inline;">
+                <button type="submit">Approve</button>
+            </form>
+            <form action="{{ url_for('reject_word', id=w.id) }}" method="POST" style="display:inline;">
+                <button type="submit">Reject</button>
+            </form>
+        </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No pending submissions.</p>
+{% endif %}
