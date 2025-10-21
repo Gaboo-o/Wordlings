@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { fetchWords, upvoteWord } from '../api/words';
 import { useNavigate } from 'react-router-dom';
 
+import  WordCard  from '../components/WordCard';
+
 export default function Home() {
   const [words, setWords] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,6 +32,10 @@ export default function Home() {
   return (
     <div>
       <h1>Wordlings</h1>
+
+      <div>
+         <WordCard title="title" description="description" />
+      </div>
 
       {/* Search & Sort */}
       <form onSubmit={handleSearch} style={{ display:'flex', marginBottom:'16px', gap:'8px' }}>
