@@ -1,11 +1,11 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, UTC
 
 class User(db.Model):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(datetime.UTC))
+    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
 
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
@@ -21,7 +21,7 @@ class Word(db.Model):
     __tablename__ = 'words'
 
     id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(datetime.UTC))
+    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
 
     status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
     submitted_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
