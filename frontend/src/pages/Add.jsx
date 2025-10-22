@@ -28,6 +28,7 @@ export default function AddWordPage() {
           placeholder="Definition"
           value={definition}
           onChange={(e) => setDefinition(e.target.value)}
+          required
         />
         <input
           placeholder="Examples"

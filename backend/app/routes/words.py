@@ -53,11 +53,12 @@ def add_word():
         word=word_text,
         definition=data.get('definition', ''),
         examples=data.get('examples', ''),
-        status='pending',
-        submitted_by=data.get('submitted_by')
+        status='approved',
     )
+
     db.session.add(new_word)
     db.session.commit()
+
     return jsonify(new_word.to_dict()), 201
 
 @words_bp.route('/upvote/<int:word_id>', methods=['POST'])

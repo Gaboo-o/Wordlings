@@ -5,8 +5,12 @@ export const fetchWords = async () => {
   return res.data;
 };
 
-export const addWord = async (wordData) => {
-  const res = await axios.post('/api/words', wordData);
+export const addWord = async ({ word, definition, examples }) => {
+  const res = await axios.post('/api/words/add', {
+    word,
+    definition,
+    examples
+  });
   return res.data;
 };
 
