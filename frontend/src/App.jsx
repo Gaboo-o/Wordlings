@@ -5,7 +5,7 @@ import Signup from './pages/Signup';
 import Admin from './pages/Admin';
 import Add from './pages/Add';
 import Word from './pages/Word';
-
+// hi
 import { AuthProvider } from './context/AuthContext';
 
 export default function App() {
