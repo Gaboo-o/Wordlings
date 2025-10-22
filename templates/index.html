@@ -1,30 +1,77 @@
-{% extends 'base.html' %} {% block content %}
+{% extends 'base.html' %}
+{% block content %}
+
+<!-- Search Bar -->
 <form class="d-flex mb-3" method="GET" action="{{ url_for('search') }}">
-  <input class="form-control me-2" type="search" name="search" placeholder="Search words..." aria-label="Search">
+  <input class="form-control me-2" type="search" name="search" placeholder="Search words..." aria-label="Search" value="{{ request.args.get('search', '') }}">
+  <select class="form-select me-2" name="sort">
+    <option value="alphabetical" {% if request.args.get('sort') == 'alphabetical' %}selected{% endif %}>A–Z</option>
+    <option value="popular" {% if request.args.get('sort') == 'popular' %}selected{% endif %}>Most Upvoted</option>
+  </select>
   <button class="btn btn-outline-primary" type="submit">Search</button>
 </form>
 
+<!-- Add Word Button -->
 <a href="{{ url_for('add_word') }}" class="btn btn-primary mb-3">Add Word</a>
-<table class="table table-bordered">
-  <tr>
-    <th>Word</th>
-    <th>Definition</th>
-    <th>Examples</th>
-    <th>Actions</th>
-  </tr>
-  {% for w in words %}
-  <tr>
-    <td>{{ w.word }}</td>
-    <td>{{ w.definition }}</td>
-    <td>{{ w.examples }}</td>
-    <td>
-      <a
-        href="{{ url_for('delete_word', id=w.id) }}"
-        class="btn btn-danger btn-sm"
-        >Delete</a
-      >
-    </td>
-  </tr>
-  {% endfor %}
+
+<!-- Word Table -->
+<table class="table table-bordered table-hover">
+  <thead class="table-light">
+    <tr>
+      <th>Word</th>
+      <th>Definition</th>
+      <th>Examples</th>
+      <th>Upvotes</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for w in words %}
+    <tr>
+      <!-- Word link -->
+      <td>
+        <a href="{{ url_for('view_word', id=w.id) }}" class="text-decoration-none fw-bold">
+          {{ w.word }}
+        </a>
+        {% if w.trend_score and w.trend_score > 70 %}
+        <span class="badge bg-warning text-dark ms-2">🔥 Trending</span>
+        {% endif %}
+      </td>
+
+      <!-- Definition & Examples -->
+      <td>{{ w.definition }}</td>
+      <td>{{ w.examples }}</td>
+
+      <!-- Upvote Button -->
+      <td>
+        <button class="btn btn-outline-success upvoteBtn" data-id="{{ w.id }}">
+          👍 <span id="upvoteCount-{{ w.id }}">{{ w.upvotes }}</span> Upvotes
+        </button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
 </table>
+
+<!-- JavaScript for instant upvotes -->
+<script>
+document.querySelectorAll(".upvoteBtn").forEach(btn => {
+  btn.addEventListener("click", async function() {
+    const wordId = this.dataset.id;
+    const res = await fetch(`/api/upvote/${wordId}`, { method: "POST" });
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById(`upvoteCount-${wordId}`).textContent = data.upvotes;
+    }
+  });
+});
+</script>
+
+<!-- Optional button click animation -->
+<style>
+.upvoteBtn:active {
+  transform: scale(1.1);
+  transition: transform 0.1s ease;
+}
+</style>
+
 {% endblock %}

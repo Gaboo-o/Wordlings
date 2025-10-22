@@ -1,0 +1,50 @@
+{% extends 'base.html' %} {% block content %}
+<div class="card shadow-lg p-4 rounded-4">
+  <h1 class="mb-3">
+    {{ word.word }} {% if trend_score > 70 %}
+    <span class="badge bg-warning text-dark ms-2">🔥 Trending</span>
+    {% endif %}
+  </h1>
+
+  <p><strong>Definition:</strong> {{ word.definition }}</p>
+  <p><strong>Examples:</strong> {{ word.examples }}</p>
+
+  {% if top_country %}
+  <p><strong>Most Popular In:</strong> {{ top_country }}</p>
+  {% endif %} {% if trend_chart_html %}
+  <h4 class="mt-4">📈 Popularity Over Time</h4>
+  <div>{{ trend_chart_html|safe }}</div>
+  {% else %}
+  <p>No trend data available yet.</p>
+  {% endif %}
+
+  <div class="mt-3">
+    <button id="upvoteBtn" class="btn btn-outline-success">
+      👍 <span id="upvoteCount">{{ word.upvotes }}</span> Upvotes
+    </button>
+  </div>
+
+  <a href="{{ url_for('index') }}" class="btn btn-secondary mt-3"
+    >← Back to Dictionary</a
+  >
+</div>
+
+<script>
+  document
+    .getElementById("upvoteBtn")
+    .addEventListener("click", async function () {
+      const res = await fetch("/api/upvote/{{ word.id }}", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        document.getElementById("upvoteCount").textContent = data.upvotes;
+      }
+    });
+</script>
+
+<style>
+  #upvoteBtn:active {
+    transform: scale(1.1);
+    transition: transform 0.1s ease;
+  }
+</style>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends 'base.html' %} {% block content %}
+<h2>🌍 Global Slang Trends (via Google Trends)</h2>
+
+<table class="table table-striped">
+  <tr>
+    <th>Slang Word</th>
+    <th>Popularity Score</th>
+  </tr>
+  {% for t in trends %}
+  <tr>
+    <td>{{ t.word }}</td>
+    <td>{{ t.popularity }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% if map_html %}
+<h3>Regional Popularity Map</h3>
+<div>{{ map_html|safe }}</div>
+{% else %}
+<p>No map data available yet. Try adding more words!</p>
+{% endif %}
+
+<a href="{{ url_for('index') }}" class="btn btn-secondary mt-3"
+  >Back to Dictionary</a
+>
+{% endblock %}
