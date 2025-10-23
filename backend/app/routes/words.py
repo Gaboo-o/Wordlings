@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.models import Word
 from app import db
+from app.utils.login import login_required
 from rapidfuzz import fuzz
 
 words_bp = Blueprint('words', __name__, url_prefix='/api/words')
@@ -43,6 +44,7 @@ def search():
     return jsonify(matched_words), 200
 
 @words_bp.route('/add', methods=['POST'])
+#@login_required
 def add_word():
     data = request.get_json() or {}
     word_text = data.get('word')
@@ -62,6 +64,7 @@ def add_word():
     return jsonify(new_word.to_dict()), 201
 
 @words_bp.route('/upvote/<int:word_id>', methods=['POST'])
+#@login_required
 def upvote(word_id):
     word = Word.query.get(word_id)
     if not word:

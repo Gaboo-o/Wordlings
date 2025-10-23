@@ -5,6 +5,11 @@ export const fetchWords = async (params = {}) => {
   return res.data;
 };
 
+export const fetchWordById = async (id) => {
+  const res = await axios.get(`/api/words/${id}`);
+  return res.data;
+};
+
 export const searchWords = async (searchTerm) => {
   const res = await axios.get('/api/words/search', {
     params: { search: searchTerm }
@@ -23,10 +28,5 @@ export const addWord = async ({ word, definition, examples }) => {
 
 export const upvoteWord = async (id) => {
   const res = await axios.post(`/api/words/upvote/${id}`);
-  return res.data;
-};
-
-export const fetchWordById = async (id) => {
-  const res = await axios.get(`/api/words/${id}`);
   return res.data;
 };
