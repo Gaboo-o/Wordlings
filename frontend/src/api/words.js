@@ -1,7 +1,14 @@
 import axios from 'axios';
 
-export const fetchWords = async () => {
-  const res = await axios.get('/api/words');
+export const fetchWords = async (params = {}) => {
+  const res = await axios.get('/api/words', { params });
+  return res.data;
+};
+
+export const searchWords = async (searchTerm) => {
+  const res = await axios.get('/api/words/search', {
+    params: { search: searchTerm }
+  });
   return res.data;
 };
 
