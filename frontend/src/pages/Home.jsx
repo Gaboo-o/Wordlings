@@ -1,30 +1,32 @@
 import { useEffect, useState } from 'react';
 import { fetchWords, searchWords, upvoteWord } from '../api/words';
 import { useNavigate } from 'react-router-dom';
-
-import  WordCard  from '../components/WordCard';
+import WordCard from '../components/WordCard';
 
 export default function Home() {
   const [words, setWords] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sort, setSort] = useState('alphabetical');
   const [loading, setLoading] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState('Guest');
+
   const navigate = useNavigate();
 
   const loadWords = async () => {
     setLoading(true);
     try {
-        let data;
-        if (searchTerm.trim()) {
-            data = await searchWords(searchTerm);
-        } else {
-            data = await fetchWords({ sort });
-        }
-        setWords(data);
+      let data;
+      if (searchTerm.trim()) {
+        data = await searchWords(searchTerm);
+      } else {
+        data = await fetchWords({ sort });
+      }
+      setWords(data);
     } catch (error) {
-        console.error("Failed to load words:", error);
+      console.error('Failed to load words:', error);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -32,57 +34,64 @@ export default function Home() {
     loadWords();
   }, [sort, searchTerm]);
 
+  useEffect(() => {
+    const user = { id: 1, username: 'TestUser' }; // mock - replace later
+    if (user && user.id) {
+      setIsLoggedIn(true);
+      setUsername(user.username);
+    }
+  }, []);
+
   const handleSearch = (e) => {
     e.preventDefault();
-
   };
 
   const handleUpvote = async (id) => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+    setWords(words.map(w => w.id === id ? { ...w, upvotes: (w.upvotes || 0) + 1 } : w));
     await upvoteWord(id);
-    setWords(words.map(w => w.id === id ? { ...w, upvotes: w.upvotes + 1 } : w));
   };
 
   return (
-  <div style={{ padding: '24px' }}>
-    <h1 style={{ textAlign: 'center' }}>🔥 Wordlings</h1>
+    <div>
+      <h1>Wordlings</h1>
+      <p>Welcome, {username}</p>
 
-    {/* Search & Sort */}
-    <form onSubmit={handleSearch} style={{ display:'flex', marginBottom:'16px', gap:'8px', justifyContent: 'center' }}>
-      <input
-        placeholder="Search words..."
-        value={searchTerm}
-        onChange={e => setSearchTerm(e.target.value)}
-        style={{ padding:'8px', width:'300px', borderRadius:'8px', border:'1px solid #ccc' }}
-      />
-      <select value={sort} onChange={e => setSort(e.target.value)} style={{ padding:'8px', borderRadius:'8px' }}>
-        <option value="alphabetical">A–Z</option>
-        <option value="popular">Most Upvoted</option>
-      </select>
-      <button type="submit" style={{ padding:'8px 16px' }}>Search</button>
-    </form>
-
-    {/* Add Word */}
-    <div style={{ textAlign: 'center', marginBottom:'24px' }}>
-      <button onClick={() => navigate('/add')} style={{ padding:'8px 16px' }}>
-        ➕ Add Word
-      </button>
-    </div>
-
-    {/* WordCard Grid */}
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-      gap: '20px'
-    }}>
-      {words.map(w => (
-        <WordCard
-          key={w.id}
-          word={{ ...w, onUpvote: handleUpvote }}
-          onClick={() => navigate(`/word/${w.id}`)}
+      <form onSubmit={handleSearch}>
+        <input
+          placeholder="Search words..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
         />
-      ))}
-    </div>
-  </div>
-);
+        <select value={sort} onChange={e => setSort(e.target.value)}>
+          <option value="alphabetical">A–Z</option>
+          <option value="popular">Most Upvoted</option>
+        </select>
+        <button type="submit">Search</button>
+      </form>
 
+      <button
+        onClick={() => navigate('/add')}
+        disabled={!isLoggedIn}
+      >
+        Add Word
+      </button>
+
+      {loading && <p>Loading...</p>}
+
+      <div>
+        {words.map(w => (
+          <WordCard
+            key={w.id}
+            word={{ ...w, onUpvote: handleUpvote }}
+            onClick={() => navigate(`/word/${w.id}`)}
+            isLoggedIn={isLoggedIn}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
