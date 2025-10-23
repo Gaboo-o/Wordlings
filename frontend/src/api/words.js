@@ -25,3 +25,8 @@ export const upvoteWord = async (id) => {
   const res = await axios.post(`/api/words/upvote/${id}`);
   return res.data;
 };
+
+export const fetchWordById = async (id) => {
+  const res = await axios.get(`/api/words/${id}`);
+  return res.data;
+};
