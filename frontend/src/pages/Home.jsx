@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchWords, upvoteWord } from '../api/words';
+import { fetchWords, searchWords, upvoteWord } from '../api/words';
 import { useNavigate } from 'react-router-dom';
 
 import  WordCard  from '../components/WordCard';
@@ -8,20 +8,33 @@ export default function Home() {
   const [words, setWords] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sort, setSort] = useState('alphabetical');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const loadWords = async () => {
-    const data = await fetchWords({ search: searchTerm, sort });
-    setWords(data);
+    setLoading(true);
+    try {
+        let data;
+        if (searchTerm.trim()) {
+            data = await searchWords(searchTerm);
+        } else {
+            data = await fetchWords({ sort });
+        }
+        setWords(data);
+    } catch (error) {
+        console.error("Failed to load words:", error);
+    } finally {
+        setLoading(false);
+    }
   };
 
   useEffect(() => {
     loadWords();
-  }, [sort]);
+  }, [sort, searchTerm]);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    loadWords();
+
   };
 
   const handleUpvote = async (id) => {
