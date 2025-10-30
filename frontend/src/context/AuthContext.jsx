@@ -14,20 +14,23 @@ export function AuthProvider({ children }) {
   });
 
   useEffect(() => {
-    // attach token (if present) to axios
-    const token = localStorage.getItem('token');
-    if (token) axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    // Check current login status on mount
+    (async () => {
+      try {
+        const res = await axios.get('/api/auth/status', { withCredentials: true });
+        if (res.data.logged_in)
+          setUser({ id: res.data.user_id, is_admin: res.data.is_admin });
+        else
+          setUser(null);
+      } catch {
+        setUser(null);
+      }
+    })();
   }, []);
 
   const login = async (username, password) => {
     const data = await authApi.login(username, password);
-    // backend may or may not return a token. We'll handle both:
-    if (data.token) {
-      localStorage.setItem('token', data.token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-    }
-    // store user object if returned, else minimal
-    const userObj = data.user || { username, is_admin: data.is_admin || false };
+    const userObj = { id: data.user_id, is_admin: data.is_admin || false };
     localStorage.setItem('user', JSON.stringify(userObj));
     setUser(userObj);
     return data;
@@ -35,11 +38,7 @@ export function AuthProvider({ children }) {
 
   const signup = async (username, password) => {
     const data = await authApi.signup(username, password);
-    if (data.token) {
-      localStorage.setItem('token', data.token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-    }
-    const userObj = data.user || { username, is_admin: data.is_admin || false };
+    const userObj = { id: data.user_id, is_admin: data.is_admin || false };
     localStorage.setItem('user', JSON.stringify(userObj));
     setUser(userObj);
     return data;
@@ -47,9 +46,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     await authApi.logout();
-    localStorage.removeItem('token');
     localStorage.removeItem('user');
-    delete axios.defaults.headers.common['Authorization'];
     setUser(null);
   };
 
