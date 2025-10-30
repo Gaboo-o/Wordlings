@@ -1,4 +1,10 @@
-import axios from 'axios';
+import axios from "axios";
+
+export const fetchTrends = async (word) => {
+  const res = await axios.get(`/api/trends/${encodeURIComponent(word)}`);
+  return res.data;
+};
+
 
 export const fetchWords = async (params = {}) => {
   const res = await axios.get('/api/words', { params });
