@@ -12,9 +12,8 @@ export default function Signup() {
   const submit = async (e) => {
     e.preventDefault();
     try {
-      const data = await signup(username, password);
-      const redirect = data.redirect || '/';
-      navigate(redirect);
+      await signup(username, password);
+      navigate('/');
     } catch (error) {
       setErr(error.response?.data?.error || 'Signup failed');
     }
