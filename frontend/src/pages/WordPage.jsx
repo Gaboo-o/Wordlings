@@ -1,59 +1,55 @@
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { fetchWordById, upvoteWord } from "../api/words";
-import { Line } from "react-chartjs-2";
-import "chart.js/auto";
+import { fetchWordById } from "../api/words";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
 import "../style/WordPage.css";
 
 export default function WordPage() {
   const { id } = useParams();
   const [word, setWord] = useState(null);
-
-  
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  if (!id) return;
+    if (!id) return;
 
-  const getWord = async () => {
-    try {
-      const data = await fetchWordById(id);
-      console.log("Fetched word:", data);
-      setWord(Array.isArray(data) ? data[0] : data);
-    } catch (err) {
-      console.error("Failed to fetch word:", err);
-    }
-  };
+    const getWord = async () => {
+      try {
+        // Fetch word from backend
+        const data = await fetchWordById(id);
+        const wordData = Array.isArray(data) ? data[0] : data;
+        setWord(wordData);
 
-  getWord();
-}, [id]);
+        // Fetch Google Trends data
+        if (wordData && wordData.word) {
+          const trendsResponse = await fetch(`/api/trends/${encodeURIComponent(wordData.word)}`);
+          const trendsData = await trendsResponse.json();
 
+          setWord((prev) => ({
+            ...prev,
+            trend: trendsData.trend,
+            topRegion: trendsData.topRegion,
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch word or trends:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleUpvote = async () => {
-    await upvoteWord(word.id);
-    setWord((prev) => ({ ...prev, upvotes: prev.upvotes + 1 }));
-  };
+    getWord();
+  }, [id]);
 
-  if (!word) return <p style={{ color: "white", textAlign: "center" }}>Loading...</p>;
-
-  // Example trend data (replace with backend data later)
-  /*const trendData = {
-    labels: ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct"],
-    datasets: [
-      {
-        label: "Trend Score",
-        data: [12, 19, 33, 50, 61, 70, word.trend_score || 80],
-        borderColor: "#FFD36E",
-        backgroundColor: "rgba(255, 211, 110, 0.2)",
-        fill: true,
-        tension: 0.4,
-      },
-    ],
-  };*/
-
-  /*const trendOptions = {
-    plugins: { legend: { display: false } },
-    scales: { x: { ticks: { color: "white" } }, y: { ticks: { color: "white" } } },
-  };*/
+  if (loading) return <p style={{ color: "white", textAlign: "center" }}>Loading...</p>;
+  if (!word) return <p style={{ color: "white", textAlign: "center" }}>Word not found.</p>;
 
   return (
     <div className="fiery-bg">
@@ -65,9 +61,7 @@ export default function WordPage() {
           </div>
 
           <div className="actions">
-            <button onClick={handleUpvote} className="btn-glow">
-              👍 {word.upvotes}
-            </button>
+            <button className="btn-glow">👍 {word.upvotes ?? 0}</button>
             <span className="trend-pill">{word.trend_score ?? 0}</span>
           </div>
         </header>
@@ -75,18 +69,32 @@ export default function WordPage() {
         <section className="word-body">
           <p><strong>Definition:</strong> {word.definition}</p>
           <p><strong>Examples:</strong> {word.examples}</p>
+          {word.topRegion && (
+            <p><strong>Top Region:</strong> 🌍 {word.topRegion}</p>
+          )}
         </section>
 
         <div className="chart-container">
-          
+          {word.trend && word.trend.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={word.trend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fill: "white" }} />
+                <YAxis tick={{ fill: "white" }} />
+                <Tooltip />
+                <Line type="monotone" dataKey="value" stroke="#FFD36E" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="no-trend">No trend data available.</p>
+          )}
         </div>
 
         <footer className="meta">
           Last updated: {new Date().toLocaleDateString()} • Top country:{" "}
-          {word.trend_country || "N/A"}
+          {word.topRegion || "N/A"}
         </footer>
       </div>
     </div>
   );
 }
-

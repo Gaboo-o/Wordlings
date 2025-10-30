@@ -2,12 +2,15 @@ from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 
+
 db = SQLAlchemy()
 
 # blueprints
 from .routes.auth import auth_bp
 from .routes.words import words_bp
 from .routes.admin import admin_bp
+from app.routes.trends import trends_bp
+
 
 class Config:
     SECRET_KEY = 'temporary_secret_key'
@@ -29,5 +32,6 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(words_bp, url_prefix="/api/words")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
+    app.register_blueprint(trends_bp, url_prefix="/api/trends")
 
     return app
