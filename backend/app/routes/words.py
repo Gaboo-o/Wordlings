@@ -3,8 +3,54 @@ from app.models import Word
 from app import db
 from app.utils.login import login_required
 from rapidfuzz import fuzz
+from pytrends.request import TrendReq
 
-words_bp = Blueprint('words', __name__, url_prefix='/api/words')
+pytrends = TrendReq(hl='en-US', tz=360)
+
+words_bp = Blueprint('words', __name__)
+
+@words_bp.route('/<string:word_text>', methods=['GET'])
+def get_word(word_text):
+    # Check if the query param includeTrends is set
+    include_trends = request.args.get('includeTrends', 'false').lower() == 'true'
+
+    # Fetch the word from your database
+    word_entry = Word.query.filter_by(word=word_text).first()
+    if not word_entry:
+        return jsonify({"error": f"Word '{word_text}' not found"}), 404
+
+    response_data = {
+        "word": word_entry.word,
+        "definition": word_entry.definition,
+        "examples": word_entry.examples  # assuming this is a list or string
+    }
+
+    # If trends are requested, fetch them
+    if include_trends:
+        try:
+            pytrends.build_payload([word_text], cat=0, timeframe='today 5-y', geo='', gprop='')
+
+            data = pytrends.interest_over_time()
+            if data.empty:
+                trend_data = []
+            else:
+                trend_data = [
+                    {"date": date.strftime("%Y-%m"), "value": int(row[word_text])}
+                    for date, row in data.iterrows()
+                ]
+
+            region_data = pytrends.interest_by_region(resolution='COUNTRY', inc_low_vol=True)
+            top_region = region_data[word_text].idxmax() if not region_data.empty and word_text in region_data else None
+
+            response_data["trends"] = trend_data
+            response_data["topRegion"] = top_region
+
+        except Exception as e:
+            response_data["trends"] = []
+            response_data["topRegion"] = None
+            response_data["trendError"] = str(e)
+
+    return jsonify(response_data), 200
 
 @words_bp.route('/', methods=['GET'])
 def index():
