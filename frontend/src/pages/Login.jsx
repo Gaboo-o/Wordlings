@@ -13,7 +13,6 @@ export default function Login() {
     e.preventDefault();
     try {
       const data = await login(username, password);
-      // if backend suggests redirect path, use it; else go home
       const redirect = data.redirect || '/';
       navigate(redirect);
     } catch (error) {
@@ -22,14 +21,81 @@ export default function Login() {
   };
 
   return (
-    <div style={{ maxWidth: 520, margin: '0 auto' }}>
-      <h2>Login</h2>
-      {err && <div style={{ color: 'red' }}>{err}</div>}
-      <form onSubmit={submit} style={{ display: 'grid', gap: 8 }}>
-        <input placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} required />
-        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required />
-        <button type="submit">Login</button>
+    <div style={{
+      maxWidth: 400,
+      margin: '80px auto',
+      padding: '2rem',
+      border: '1px solid #ddd',
+      borderRadius: 12,
+      boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+      backgroundColor: '#fff',
+      textAlign: 'center',
+      fontFamily: 'sans-serif'
+    }}>
+      <h2 style={{ marginBottom: '1.5rem' }}>Login</h2>
+
+      {err && <div style={{ color: 'red', marginBottom: '1rem' }}>{err}</div>}
+
+      <form onSubmit={submit} style={{ display: 'grid', gap: 12 }}>
+        <input
+          placeholder="Username"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+          required
+          style={{
+            padding: '0.6rem 0.8rem',
+            borderRadius: 8,
+            border: '1px solid #ccc',
+            fontSize: '1rem'
+          }}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          required
+          style={{
+            padding: '0.6rem 0.8rem',
+            borderRadius: 8,
+            border: '1px solid #ccc',
+            fontSize: '1rem'
+          }}
+        />
+        <button
+          type="submit"
+          style={{
+            padding: '0.7rem 0.8rem',
+            borderRadius: 8,
+            backgroundColor: '#007BFF',
+            color: 'white',
+            border: 'none',
+            fontSize: '1rem',
+            cursor: 'pointer'
+          }}
+        >
+          Login
+        </button>
       </form>
+
+      {/* Signup link */}
+      <div style={{ marginTop: '1.5rem', fontSize: '0.95rem', color: '#555' }}>
+        Don’t have an account?{' '}
+        <button
+          type="button"
+          onClick={() => navigate('/signup')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#007BFF',
+            textDecoration: 'underline',
+            cursor: 'pointer',
+            fontSize: '0.95rem'
+          }}
+        >
+          Sign up
+        </button>
+      </div>
     </div>
   );
 }

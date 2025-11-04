@@ -74,7 +74,7 @@ export default function Home() {
       </form>
 
       <button
-        onClick={() => navigate('/add')}
+        onClick={() => navigate('/login')}
         disabled={!isLoggedIn}
       >
         Add Word
