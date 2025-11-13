@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react';
 import { fetchWords, searchWords, upvoteWord } from '../api/words';
 import { useNavigate } from 'react-router-dom';
 import WordCard from '../components/WordCard';
+import { useAuth } from '../context/AuthContext';
 
 export default function Home() {
   const [words, setWords] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sort, setSort] = useState('alphabetical');
   const [loading, setLoading] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState('Guest');
+  const { user } = useAuth();
+  const isLoggedIn = !!user;
+  const username = isLoggedIn ? (user.username || 'User') : 'Guest';
 
   const navigate = useNavigate();
 
@@ -34,13 +36,7 @@ export default function Home() {
     loadWords();
   }, [sort, searchTerm]);
 
-  useEffect(() => {
-    const user = { id: 1, username: 'TestUser' }; // mock - replace later
-    if (user && user.id) {
-      setIsLoggedIn(true);
-      setUsername(user.username);
-    }
-  }, []);
+ 
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -74,8 +70,7 @@ export default function Home() {
       </form>
 
       <button
-        onClick={() => navigate('/login')}
-        disabled={!isLoggedIn}
+        onClick={() => navigate(isLoggedIn ? '/add' : '/login')}
       >
         Add Word
       </button>
@@ -86,9 +81,9 @@ export default function Home() {
         {words.map(w => (
           <WordCard
             key={w.id}
-            word={{ ...w, onUpvote: handleUpvote }}
+            word={w}
             onClick={() => navigate(`/word/${w.id}`)}
-            isLoggedIn={isLoggedIn}
+            onUpvote={handleUpvote}
           />
         ))}
       </div>
