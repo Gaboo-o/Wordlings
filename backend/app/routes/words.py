@@ -4,6 +4,8 @@ from app import db
 from app.utils.login import login_required
 from rapidfuzz import fuzz
 from pytrends.request import TrendReq
+from flask_login import login_required, current_user
+from app.models import Word, Upvote
 
 pytrends = TrendReq(hl='en-US', tz=360)
 
@@ -90,32 +92,35 @@ def search():
     return jsonify(matched_words), 200
 
 @words_bp.route('/add', methods=['POST'])
-#@login_required
+@login_required
 def add_word():
     data = request.get_json() or {}
-    word_text = data.get('word')
+    word_text = (data.get('word') or '').strip()
     if not word_text:
         return jsonify({"error": "Word is required"}), 400
 
     new_word = Word(
         word=word_text,
-        definition=data.get('definition', ''),
-        examples=data.get('examples', ''),
-        status='approved',
+        definition=(data.get('definition') or '').strip(),
+        examples=(data.get('examples') or '').strip(),
+        status='pending',                     # require admin approval
+        submitted_by=current_user.id
     )
-
     db.session.add(new_word)
     db.session.commit()
-
     return jsonify(new_word.to_dict()), 201
 
 @words_bp.route('/upvote/<int:word_id>', methods=['POST'])
-#@login_required
+@login_required
 def upvote(word_id):
     word = Word.query.get(word_id)
     if not word:
         return jsonify({"error": "Word not found"}), 404
 
+    if Upvote.query.filter_by(user_id=current_user.id, word_id=word_id).first():
+        return jsonify({"error": "Already upvoted"}), 400
+
+    db.session.add(Upvote(user_id=current_user.id, word_id=word_id))
     word.upvotes += 1
     db.session.commit()
     return jsonify({"upvotes": word.upvotes}), 200
