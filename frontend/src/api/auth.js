@@ -10,9 +10,9 @@ export const login = async (username, password) => {
 export const signup = async (username, password) => {
   const res = await axios.post(
     '/api/auth/signup',
-    { username, password }
+    { username, password },
+    { withCredentials: true }
   );
-  console.log("after await auth.js");
   return res.data;
 };
 
