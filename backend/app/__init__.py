@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 
+
 db = SQLAlchemy()
 
 # user model
@@ -14,6 +15,7 @@ from .routes.words import words_bp
 from .routes.admin import admin_bp
 from app.routes.trends import trends_bp
 
+
 class Config:
     SECRET_KEY = 'temporary_secret_key'
     SQLALCHEMY_DATABASE_URI = 'sqlite:///dictionary.db'
@@ -23,7 +25,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    CORS(app, origins=["http://localhost:5173"], supports_credentials=True)
+    CORS(app)
 
     # database
     db.init_app(app)

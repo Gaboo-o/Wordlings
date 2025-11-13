@@ -5,6 +5,7 @@ export const fetchTrends = async (word) => {
   return res.data;
 };
 
+
 export const fetchWords = async (params = {}) => {
   const res = await axios.get('/api/words', { params });
   return res.data;
