@@ -8,28 +8,34 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 @auth_bp.route('/signup', methods=['POST'])
 def signup():
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
+    print("📩 Received signup request")
+    try:
+        data = request.json
+        username = data.get('username')
+        password = data.get('password')
 
-    if not username or not password:
-        return jsonify({'error': 'Username and password are required'}), 400
+        if not username or not password:
+            return jsonify({'error': 'Username and password are required'}), 400
 
-    if User.query.filter_by(username=username).first():
-        return jsonify({'error': 'Username already taken'}), 400
+        if User.query.filter_by(username=username).first():
+            return jsonify({'error': 'Username already taken'}), 400
 
-    hashed_pw = generate_password_hash(password)
-    user = User(username=username, password=hashed_pw)
-    db.session.add(user)
-    db.session.commit()
+        hashed_pw = generate_password_hash(password)
+        user = User(username=username, password_hash=hashed_pw)
+        db.session.add(user)
+        db.session.commit()
 
-    login_user(user)
+        login_user(user)
 
-    return jsonify({
-        'message': 'Signup successful',
-        'user_id': user.id,
-        'is_admin': user.is_admin
-    }), 201
+        return jsonify({
+            'message': 'Signup successful',
+            'user_id': user.id,
+            'is_admin': user.is_admin
+        }), 201
+    except Exception as e:
+        print("🔥 Signup error:", e)
+        return jsonify({'error': str(e)}), 500
+
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -39,7 +45,7 @@ def login():
     password = data.get('password')
 
     user = User.query.filter_by(username=username).first()
-    if not user or not check_password_hash(user.password, password):
+    if not user or not check_password_hash(user.password_hash, password):
         return jsonify({'error': 'Invalid credentials'}), 401
 
     login_user(user)

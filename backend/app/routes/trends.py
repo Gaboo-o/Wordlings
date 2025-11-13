@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify
 from pytrends.request import TrendReq
 
 trends_bp = Blueprint('trends', __name__)
+pytrends = TrendReq(hl='en-US', tz=360, timeout=(5, 10))
 
 @trends_bp.route('/<word>', methods=['GET'])
 def get_trend(word):
