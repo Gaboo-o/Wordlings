@@ -11,10 +11,14 @@ export default function Signup() {
 
   const submit = async (e) => {
     e.preventDefault();
+    console.log("outside try Signup.jsx");
     try {
+      console.log("before await Signup.jsx");
       await signup(username, password);
+      console.log("after await Signup.jsx");
       navigate('/');
     } catch (error) {
+      console.log("in error await Signup.jsx");
       setErr(error.response?.data?.error || 'Signup failed');
     }
   };

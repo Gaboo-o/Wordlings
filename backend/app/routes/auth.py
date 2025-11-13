@@ -8,18 +8,21 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 @auth_bp.route('/signup', methods=['POST'])
 def signup():
-    data = request.json
+    print('in /signup auth.py', flush=True)
+    data = request.get_json() or {}
     username = data.get('username')
     password = data.get('password')
 
+    print('in /signup auth.py username: ', username, 'password: ', password, flush=True)
     if not username or not password:
         return jsonify({'error': 'Username and password are required'}), 400
 
     if User.query.filter_by(username=username).first():
         return jsonify({'error': 'Username already taken'}), 400
 
+    print('after if auth.py', flush=True)
     hashed_pw = generate_password_hash(password)
-    user = User(username=username, password=hashed_pw)
+    user = User(username=username, password_hash=hashed_pw)
     db.session.add(user)
     db.session.commit()
 
