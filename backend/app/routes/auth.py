@@ -30,6 +30,7 @@ def signup():
         return jsonify({
             'message': 'Signup successful',
             'user_id': user.id,
+            'username': user.username,
             'is_admin': user.is_admin
         }), 201
     except Exception as e:

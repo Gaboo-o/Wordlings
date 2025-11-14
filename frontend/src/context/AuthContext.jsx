@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
       try {
         const res = await axios.get('/api/auth/status', { withCredentials: true });
         if (res.data.logged_in)
-          setUser({ id: res.data.user_id, is_admin: res.data.is_admin });
+          setUser({ id: res.data.user_id, username: res.data.username, is_admin: res.data.is_admin });
         else
           setUser(null);
       } catch {
@@ -30,15 +30,18 @@ export function AuthProvider({ children }) {
 
   const login = async (username, password) => {
     const data = await authApi.login(username, password);
-    const userObj = { id: data.user_id, is_admin: data.is_admin || false };
+    const userObj = { id: data.user_id, username: data.username, is_admin: data.is_admin || false };
     localStorage.setItem('user', JSON.stringify(userObj));
     setUser(userObj);
     return data;
   };
 
   const signup = async (username, password) => {
+    console.log("AuthContext.jsx before await");
     const data = await authApi.signup(username, password);
-    const userObj = { id: data.user_id, is_admin: data.is_admin || false };
+    console.log("AuthContext.jsx after await");
+    console.log(data.user_id, data.is_admin);
+    const userObj = { id: data.user_id, username: data.username, is_admin: data.is_admin || false };
     localStorage.setItem('user', JSON.stringify(userObj));
     setUser(userObj);
     return data;
