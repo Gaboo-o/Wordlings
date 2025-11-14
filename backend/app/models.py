@@ -1,6 +1,7 @@
 from app import db
 from datetime import datetime, UTC
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
 
 class Word(db.Model):
     __tablename__ = 'word'
@@ -34,7 +35,7 @@ class Word(db.Model):
             "trend_country": self.trend_country
         }
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = 'user';
 
     id = db.Column(db.Integer, primary_key=True)
