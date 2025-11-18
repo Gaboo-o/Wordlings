@@ -6,6 +6,7 @@ from rapidfuzz import fuzz
 from pytrends.request import TrendReq
 from flask_login import login_required, current_user
 from app.models import Word, Upvote
+from app import limiter
 
 pytrends = TrendReq(hl='en-US', tz=360)
 
@@ -93,24 +94,37 @@ def search():
 
 @words_bp.route('/add', methods=['POST'])
 @login_required
+@limiter.limit("10/minute")
 def add_word():
     data = request.get_json() or {}
     word_text = (data.get('word') or '').strip()
+    definition = (data.get('definition') or '').strip()
+    examples = (data.get('examples') or '').strip()
+
+    # 🔹 Input validation
     if not word_text:
         return jsonify({"error": "Word is required"}), 400
+    if len(word_text) > 50:
+        return jsonify({"error": "Word too long (max 50 chars)"}), 400
+    if len(definition) > 200:
+        return jsonify({"error": "Definition too long (max 200 chars)"}), 400
+    if len(examples) > 500:
+        return jsonify({"error": "Examples too long (max 500 chars)"}), 400
 
     new_word = Word(
         word=word_text,
-        definition=(data.get('definition') or '').strip(),
-        examples=(data.get('examples') or '').strip(),
-        status='pending',                     # require admin approval
+        definition=definition,
+        examples=examples,
+        status='pending',
         submitted_by=current_user.id
     )
     db.session.add(new_word)
     db.session.commit()
     return jsonify(new_word.to_dict()), 201
 
+
 @words_bp.route('/upvote/<int:word_id>', methods=['POST'])
+@limiter.limit("30/minute;200/day")  # burst + daily cap
 @login_required
 def upvote(word_id):
     word = Word.query.get(word_id)

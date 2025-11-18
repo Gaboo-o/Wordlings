@@ -1,10 +1,12 @@
 from flask import Blueprint, jsonify
 from pytrends.request import TrendReq
+from app import limiter
 
 trends_bp = Blueprint('trends', __name__)
 pytrends = TrendReq(hl='en-US', tz=360, timeout=(5, 10))
 
 @trends_bp.route('/<word>', methods=['GET'])
+@limiter.limit("60/minute")     # analytics calls can spike but still cap
 def get_trend(word):
     try:
         pytrends = TrendReq(hl='en-US', tz=360)
