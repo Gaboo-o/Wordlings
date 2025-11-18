@@ -8,12 +8,10 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
 from joblib import load
-from .routes.ml import ml_bp
 import os
 
 
 db = SQLAlchemy()
-
 
 # --- Security / Rate limit config ---
 def _rate_key():
@@ -28,21 +26,13 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"],
 )
 
-model_path = os.path.join(os.path.dirname(__file__), "..", "models", "word_trend_clf.joblib")
-MODEL = None
-if os.path.exists(model_path):
-    try:
-        MODEL = load(model_path)
-        print("ML model loaded.")
-    except Exception as e:
-        print("Failed to load ML model:", e)
-
 # ---- existing imports of blueprints ----
 from .models import User
 from .routes.auth import auth_bp
 from .routes.words import words_bp
 from .routes.admin import admin_bp
 from .routes.trends import trends_bp
+from .routes.ml import ml_bp
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-change-me')
@@ -52,10 +42,20 @@ class Config:
     SESSION_COOKIE_SECURE = False  # True in prod
     MAX_CONTENT_LENGTH = 1 * 1024 * 1024  # 🔹 1 MB request limit
 
-
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    model_path = os.path.join(app.root_path, "models", "word_trend_clf.joblib")
+    model = None
+    if os.path.exists(model_path):
+        try:
+            model = load(model_path)
+            print("ML model loaded.")
+        except Exception as e:
+            print("Failed to load ML model:", e)
+
+    app.config['MODEL'] = model
 
     # Security headers (Talisman)
     Talisman(
