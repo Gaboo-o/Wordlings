@@ -7,10 +7,13 @@ from flask import g, request, jsonify, make_response
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
+from joblib import load
+from .routes.ml import ml_bp
 import os
 
 
 db = SQLAlchemy()
+
 
 # --- Security / Rate limit config ---
 def _rate_key():
@@ -24,6 +27,15 @@ limiter = Limiter(
     storage_uri="memory://",          # swap to Redis in prod: "redis://localhost:6379/0"
     default_limits=["200 per day", "50 per hour"],
 )
+
+model_path = os.path.join(os.path.dirname(__file__), "..", "models", "word_trend_clf.joblib")
+MODEL = None
+if os.path.exists(model_path):
+    try:
+        MODEL = load(model_path)
+        print("ML model loaded.")
+    except Exception as e:
+        print("Failed to load ML model:", e)
 
 # ---- existing imports of blueprints ----
 from .models import User
@@ -105,5 +117,6 @@ def create_app():
             if not token_cookie or not token_header or token_cookie != token_header:
                 return jsonify({"error": "CSRF token missing or invalid"}), 403
 
-
+    app.register_blueprint(ml_bp)
     return app
+
