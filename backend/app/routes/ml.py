@@ -3,10 +3,9 @@ from joblib import load
 from pytrends.request import TrendReq
 import numpy as np
 import pandas as pd
-from app import MODEL, db
 from app.models import Word
 
-ml_bp = Blueprint("ml", __name__, url_prefix="/api/ml")
+ml_bp = Blueprint("ml", __name__)
 
 def fetch_trends_series(pytrends, term):
     pytrends.build_payload([term], timeframe='today 5-y', geo='', gprop='')
@@ -48,7 +47,8 @@ def trend_features(series_df: pd.DataFrame):
 
 @ml_bp.route('/predict', methods=['GET'])
 def predict():
-    if MODEL is None:
+    model = current_app.config.get("MODEL")
+    if model is None:
         return jsonify({"error":"Model not loaded. Train first."}), 500
 
     word_id = request.args.get("word_id", type=int)
@@ -86,7 +86,7 @@ def predict():
         "text": text
     }
     X = pd.DataFrame([row])
-    prob = float(MODEL.predict_proba(X)[0,1])
+    prob = float(model.predict_proba(X)[0,1])
     label = "trending" if prob >= 0.5 else "niche"
     return jsonify({
         "word": term,
