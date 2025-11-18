@@ -3,10 +3,13 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 from app.models import User
+from flask_limiter.util import get_remote_address
+from app import limiter
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 @auth_bp.route('/signup', methods=['POST'])
+@limiter.limit("5/minute")   # signups per IP/user
 def signup():
     print("📩 Received signup request")
     try:
@@ -40,6 +43,7 @@ def signup():
 
 
 @auth_bp.route('/login', methods=['POST'])
+@limiter.limit("10/minute")  # deter brute-force; tune as needed
 def login():
     data = request.json
     username = data.get('username')
