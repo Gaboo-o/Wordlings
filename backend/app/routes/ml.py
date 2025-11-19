@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from joblib import load
 from pytrends.request import TrendReq
 import numpy as np
