@@ -18,3 +18,12 @@ export const addWord = async ({ word, definition, examples }) =>
 
 export const upvoteWord = async (id) =>
   (await axios.post(`/api/words/upvote/${id}`, {}, { withCredentials: true, headers: csrfHeader() })).data;
+
+export const fetchSimilar = async ({ wordId, word, limit = 12 }) => {
+  const params = {};
+  if (wordId) params.word_id = wordId;
+  if (word) params.word = word;
+  params.limit = limit;
+  const res = await axios.get("/api/words/similar", { params });
+  return res.data;
+};

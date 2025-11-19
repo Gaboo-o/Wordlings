@@ -7,6 +7,7 @@ from pytrends.request import TrendReq
 from flask_login import login_required, current_user
 from app.models import Word, Upvote
 from app import limiter
+from app.utils.embeddings import invalidate_cache
 
 pytrends = TrendReq(hl='en-US', tz=360)
 
@@ -119,7 +120,13 @@ def add_word():
         submitted_by=current_user.id
     )
     db.session.add(new_word)
+    from app.utils.embeddings import save_cache
+    save_cache({})
     db.session.commit()
+    try:
+        invalidate_cache()
+    except Exception:
+        pass
     return jsonify(new_word.to_dict()), 201
 
 
