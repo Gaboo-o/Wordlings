@@ -12,9 +12,8 @@ export default function Login() {
   const submit = async (e) => {
     e.preventDefault();
     try {
-      const data = await login(username, password);
-      const redirect = data.redirect || '/';
-      navigate(redirect);
+      await login(username, password);
+      navigate('/');
     } catch (error) {
       setErr(error.response?.data?.error || 'Login failed');
     }
