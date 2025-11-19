@@ -1,17 +1,17 @@
-import { useEffect, useState } from 'react';
-import { fetchWords, searchWords, upvoteWord } from '../api/words';
-import { useNavigate } from 'react-router-dom';
-import WordCard from '../components/WordCard';
-import { useAuth } from '../context/AuthContext';
+import { useEffect, useState } from "react";
+import { fetchWords, searchWords, upvoteWord } from "../api/words";
+import { useNavigate } from "react-router-dom";
+import WordCard from "../components/WordCard";
+import { useAuth } from "../context/AuthContext";
 
 export default function Home() {
   const [words, setWords] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sort, setSort] = useState('alphabetical');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sort, setSort] = useState("alphabetical");
   const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const isLoggedIn = !!user;
-  const username = isLoggedIn ? (user.username || 'User') : 'Guest';
+  const username = isLoggedIn ? user.username || "User" : "Guest";
 
   const navigate = useNavigate();
 
@@ -26,9 +26,19 @@ export default function Home() {
       }
       setWords(data);
     } catch (error) {
-      console.error('Failed to load words:', error);
+      console.error("Failed to load words:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogout = async (e) => {
+    e.preventDefault();
+    try {
+      await logout();
+      //navigate('/');
+    } catch (error) {
+      setErr(error.response?.data?.error || 'Logout failed');
     }
   };
 
@@ -36,18 +46,20 @@ export default function Home() {
     loadWords();
   }, [sort, searchTerm]);
 
- 
-
   const handleSearch = (e) => {
     e.preventDefault();
   };
 
   const handleUpvote = async (id) => {
     if (!isLoggedIn) {
-      navigate('/login');
+      navigate("/login");
       return;
     }
-    setWords(words.map(w => w.id === id ? { ...w, upvotes: (w.upvotes || 0) + 1 } : w));
+    setWords(
+      words.map((w) =>
+        w.id === id ? { ...w, upvotes: (w.upvotes || 0) + 1 } : w
+      )
+    );
     await upvoteWord(id);
   };
 
@@ -60,25 +72,27 @@ export default function Home() {
         <input
           placeholder="Search words..."
           value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <select value={sort} onChange={e => setSort(e.target.value)}>
+        <select value={sort} onChange={(e) => setSort(e.target.value)}>
           <option value="alphabetical">A–Z</option>
           <option value="popular">Most Upvoted</option>
         </select>
         <button type="submit">Search</button>
       </form>
 
-      <button
-        onClick={() => navigate(isLoggedIn ? '/add' : '/login')}
-      >
+      <button onClick={() => navigate(isLoggedIn ? "/add" : "/login")}>
         Add Word
+      </button>
+
+      <button onClick={handleLogout}>
+        Logout
       </button>
 
       {loading && <p>Loading...</p>}
 
       <div>
-        {words.map(w => (
+        {words.map((w) => (
           <WordCard
             key={w.id}
             word={w}
