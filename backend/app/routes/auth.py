@@ -11,7 +11,7 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 @auth_bp.route('/signup', methods=['POST'])
 @limiter.limit("5/minute")   # signups per IP/user
 def signup():
-    print("📩 Received signup request")
+    print("Received signup request")
     try:
         data = request.json
         username = data.get('username')
@@ -37,35 +37,41 @@ def signup():
             'is_admin': user.is_admin
         }), 201
     except Exception as e:
-        print("🔥 Signup error:", e)
+        print("Signup error:", e)
         return jsonify({'error': str(e)}), 500
-
-
 
 @auth_bp.route('/login', methods=['POST'])
 @limiter.limit("10/minute")  # deter brute-force; tune as needed
 def login():
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
+    try: 
+        data = request.json
+        username = data.get('username')
+        password = data.get('password')
 
-    user = User.query.filter_by(username=username).first()
-    if not user or not check_password_hash(user.password_hash, password):
-        return jsonify({'error': 'Invalid credentials'}), 401
+        if not username or not password:
+            return jsonify({'error': 'Username and password are required'}), 400
+        
+        user = User.query.filter_by(username=username).first()
+        if not user or not check_password_hash(user.password_hash, password):
+            return jsonify({'error': 'Invalid credentials'}), 401
 
-    login_user(user)
+        login_user(user)
 
-    redirect_url = (
-        url_for('admin.review_submissions')
-        if user.is_admin else url_for('main.index')
-    )
+        # redirect_url = (
+        #     url_for('admin.review_submissions')
+        #     if user.is_admin else url_for('main.index')
+        # )
 
-    return jsonify({
-        'message': 'Login successful',
-        'redirect': redirect_url,
-        'user_id': user.id,
-        'is_admin': user.is_admin
-    }), 200
+        return jsonify({
+            'message': 'Login successful',
+            'user_id': user.id,
+            'username': user.username,
+            'is_admin': user.is_admin
+        }), 200
+    except Exception as e:
+        print("Signup error:", e)
+        return jsonify({'error': str(e)}), 500
+
 
 
 @auth_bp.route('/logout', methods=['POST'])

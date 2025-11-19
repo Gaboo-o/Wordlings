@@ -12,9 +12,7 @@ export default function Signup() {
   const submit = async (e) => {
     e.preventDefault();
     try {
-      console.log("Signup.jsx before await");
       await signup(username, password);
-      console.log("Signup.jsx after await");
       navigate('/');
     } catch (error) {
       setErr(error.response?.data?.error || 'Signup failed');

@@ -37,10 +37,7 @@ export function AuthProvider({ children }) {
   };
 
   const signup = async (username, password) => {
-    console.log("AuthContext.jsx before await");
     const data = await authApi.signup(username, password);
-    console.log("AuthContext.jsx after await");
-    console.log(data.user_id, data.is_admin);
     const userObj = { id: data.user_id, username: data.username, is_admin: data.is_admin || false };
     localStorage.setItem('user', JSON.stringify(userObj));
     setUser(userObj);
