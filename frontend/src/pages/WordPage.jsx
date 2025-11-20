@@ -1,8 +1,6 @@
-// frontend/src/pages/WordPage.jsx
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { fetchWordById, fetchSimilar } from "../api/words";
-import FloatingSimilar from "../components/FloatingSimilar";
 
 import {
   LineChart,
@@ -15,6 +13,47 @@ import {
 } from "recharts";
 
 import "../style/WordPage.css"; // your existing styles
+import "../style/FloatingSimilar.css"; // ensure this exists from earlier step
+
+function FloatingSimilar({ centerWord, items = [], onClick }) {
+  const rings = [110, 160, 210];
+
+  // Simple polar layout
+  const placed = items.slice(0, 18).map((n, i) => {
+    const ring = rings[i % rings.length];
+    const angle = (i * (360 / Math.max(items.length, 1))) + ((i * 13) % 20);
+    const rad = (angle * Math.PI) / 180;
+    const x = ring * Math.cos(rad);
+    const y = ring * Math.sin(rad);
+    return { ...n, x, y };
+  });
+
+  return (
+    <div className="floating-container">
+      <div className="floating-center">{centerWord}</div>
+      <svg className="floating-rings" viewBox="-210 -210 420 420">
+        {rings.map((r, idx) => (
+          <circle key={idx} cx="0" cy="0" r={r} className="floating-ring" />
+        ))}
+      </svg>
+      {placed.map((n) => (
+        <button
+          key={n.id}
+          className="floating-node"
+          style={{
+            left: "50%",
+            top: "50%",
+            transform: `translate(calc(-50% + ${n.x}px), calc(-50% + ${n.y}px))`,
+          }}
+          title={`similarity: ${Number(n.score || 0).toFixed(2)}`}
+          onClick={() => onClick?.(n)}
+        >
+          {n.word}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function WordPage() {
   const { id } = useParams();
@@ -27,40 +66,33 @@ export default function WordPage() {
   useEffect(() => {
     if (!id) return;
 
+    let mounted = true;
     const load = async () => {
       setLoading(true);
       try {
-        // 1) Fetch the word details
+        // 1) word details
         const data = await fetchWordById(id);
         const wordData = Array.isArray(data) ? data[0] : data;
-        setWord(wordData);
+        if (!mounted) return;
+        setWord(wordData || null);
 
-        // 2) Fetch Google Trends for this word
-        if (wordData?.word) {
-          const trendsResponse = await fetch(
-            `/api/trends/${encodeURIComponent(wordData.word)}`
-          );
-          const trendsData = await trendsResponse.json();
-          setWord((prev) => ({
-            ...prev,
-            trend: trendsData.trend || [],
-            topRegion: trendsData.topRegion || null,
-          }));
-        }
-
-        // 3) Fetch similar words (AI/embeddings)
-        //const sims = await fetchSimilar({ wordId: Number(id), limit: 12 });
-        //setSimilar(Array.isArray(sims) ? sims : []);
+        // 2) similar words (robust; returns [])
+        const sims = await fetchSimilar({ wordId: Number(id), limit: 12 });
+        if (!mounted) return;
+        setSimilar(Array.isArray(sims) ? sims : []);
       } catch (err) {
-        console.error("Failed to load word page:", err);
-        setWord(null);
-        setSimilar([]);
+        console.error("WordPage load error:", err);
+        if (mounted) {
+          setWord(null);
+          setSimilar([]);
+        }
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
     load();
+    return () => { mounted = false; };
   }, [id]);
 
   if (loading) {
@@ -78,7 +110,6 @@ export default function WordPage() {
         <header className="word-header">
           <div>
             <h1>{word.word}</h1>
-            {/* Show trending badge if you want to use your trend_score */}
             {typeof word.trend_score === "number" && word.trend_score >= 70 && (
               <small className="pos">🔥 Trending</small>
             )}
@@ -92,7 +123,7 @@ export default function WordPage() {
 
         {/* Similar words orbit */}
         <section className="chart-container" style={{ marginTop: 16 }}>
-          {similar.length > 0 ? (
+          {Array.isArray(similar) && similar.length > 0 ? (
             <FloatingSimilar
               centerWord={word.word}
               items={similar}
@@ -100,7 +131,7 @@ export default function WordPage() {
             />
           ) : (
             <p className="no-trend" style={{ textAlign: "center", color: "white" }}>
-              No similar words yet. Add a few more words to see suggestions here.
+              No similar words yet.
             </p>
           )}
         </section>
@@ -113,39 +144,26 @@ export default function WordPage() {
           <p>
             <strong>Examples:</strong> {word.examples}
           </p>
-          {word.topRegion && (
-            <p>
-              <strong>Top Region:</strong> 🌍 {word.topRegion}
-            </p>
-          )}
         </section>
 
-        {/* Trend chart */}
-        <div className="chart-container">
-          {word.trend && word.trend.length > 0 ? (
+        {/* Trend chart (kept, but fetchSimilar no longer depends on it) */}
+        {Array.isArray(word.trend) && word.trend.length > 0 && (
+          <div className="chart-container">
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={word.trend}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fill: "white" }} />
                 <YAxis tick={{ fill: "white" }} />
                 <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#FFD36E"
-                  strokeWidth={2}
-                />
+                <Line type="monotone" dataKey="value" stroke="#FFD36E" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
-          ) : (
-            <p className="no-trend">No trend data available.</p>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Footer */}
         <footer className="meta">
-          Last updated: {new Date().toLocaleDateString()} • Top country:{" "}
-          {word.topRegion || "N/A"}
+          Last updated: {new Date().toLocaleDateString()}
         </footer>
       </div>
     </div>

@@ -36,5 +36,6 @@ def get_trend(word):
         return jsonify({"trend": trend_data, "topRegion": top_region})
 
     except Exception as e:
+    # Don't 500 the app if Trends is unavailable; return empty data.
         print("Error fetching Google Trends data:", e)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"trend": [], "topRegion": None, "trendError": str(e)}), 200
