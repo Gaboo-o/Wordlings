@@ -9,7 +9,6 @@ from flask_talisman import Talisman
 from joblib import load
 import os
 
-
 db = SQLAlchemy()
 
 # --- Security / Rate limit config ---
