@@ -72,17 +72,19 @@ def login():
         print("Signup error:", e)
         return jsonify({'error': str(e)}), 500
 
-
-
 @auth_bp.route('/logout', methods=['POST'])
 @login_required
 def logout():
     logout_user()
     return jsonify({'message': 'Logged out successfully'}), 200
 
-
 @auth_bp.route('/status', methods=['GET'])
 def status():
     if current_user.is_authenticated:
-        return jsonify({'logged_in': True, 'user_id': current_user.id, 'is_admin': current_user.is_admin})
+        return jsonify({
+            'logged_in': True,
+            'user_id': current_user.id,
+            'username': current_user.username,
+            'is_admin': current_user.is_admin
+        })
     return jsonify({'logged_in': False}), 200

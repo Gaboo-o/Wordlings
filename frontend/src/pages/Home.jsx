@@ -91,6 +91,12 @@ export default function Home() {
         Logout
       </button>
 
+      {user?.is_admin && (
+        <button onClick={() => navigate('/admin')}>
+          Admin Dashboard
+        </button>
+      )}
+
       {loading && <p>Loading...</p>}
 
       <div>

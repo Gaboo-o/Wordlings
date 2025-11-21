@@ -27,7 +27,7 @@ limiter = Limiter(
 from .models import User
 from .routes.auth import auth_bp
 from .routes.words import words_bp
-# from .routes.admin import admin_bp            # optional: comment out if not using
+from .routes.admin import admin_bp
 from .routes.trends import trends_bp
 from .routes.ml import ml_bp
 from .routes.similar import similar_bp
@@ -93,7 +93,7 @@ def create_app():
 
     # Blueprints (register each ONCE)
     app.register_blueprint(auth_bp)                                 # /api/auth inside bp
-    # app.register_blueprint(admin_bp)                               # optional
+    app.register_blueprint(admin_bp)
     app.register_blueprint(words_bp,  url_prefix="/api/words")
     app.register_blueprint(trends_bp, url_prefix="/api/trends")
     app.register_blueprint(similar_bp)                               # has url_prefix="/api/words"
