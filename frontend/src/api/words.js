@@ -58,17 +58,19 @@ export const addWord = async ({ word, definition, examples }) => {
 
 export const upvoteWord = async (id) => {
   try {
+    const token = document.cookie.split("; ").find(c => c.startsWith("X-CSRF-Token="))?.split("=")[1] || "";
     const res = await axios.post(
       `/api/words/upvote/${id}`,
       {},
-      { headers: { "X-CSRF-Token": document.cookie.split("; ").find(c => c.startsWith("X-CSRF-Token="))?.split("=")[1] || "" }, withCredentials: true }
+      { headers: { "X-CSRF-Token": token }, withCredentials: true }
     );
-    return res.data;
+    return res.data; // { upvotes, user_has_upvoted }
   } catch (e) {
     console.error("upvoteWord failed:", e?.response?.status, e?.response?.data || e);
     throw e;
   }
 };
+
 
 // NEW: robust similar-words fetcher (never throws; always returns an array)
 export const fetchSimilar = async ({ wordId, word, limit = 12 }) => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { fetchWordById, fetchSimilar } from "../api/words";
+import { fetchWordById, fetchSimilar, fetchTrends, upvoteWord } from "../api/words";
 
 import {
   LineChart,
@@ -14,6 +14,7 @@ import {
 
 import "../style/WordPage.css"; // your existing styles
 import "../style/FloatingSimilar.css"; // ensure this exists from earlier step
+
 
 function FloatingSimilar({ centerWord, items = [], onClick }) {
   const rings = [110, 160, 210];
@@ -76,7 +77,15 @@ export default function WordPage() {
         if (!mounted) return;
         setWord(wordData || null);
 
-        // 2) similar words (robust; returns [])
+        // 2) trends (safe: returns empty on failure)
+       if (wordData?.word) {
+         const t = await fetchTrends(wordData.word);
+         if (mounted) {
+           setWord(prev => prev ? { ...prev, trend: t.trend || [], topRegion: t.topRegion || null } : prev);
+         }
+       }
+
+        // 3) similar words (robust; returns [])
         const sims = await fetchSimilar({ wordId: Number(id), limit: 12 });
         if (!mounted) return;
         setSimilar(Array.isArray(sims) ? sims : []);
@@ -103,6 +112,24 @@ export default function WordPage() {
     return <p style={{ color: "white", textAlign: "center" }}>Word not found.</p>;
   }
 
+  const handleUpvote = async () => {
+  if (!word) return;
+  try {
+    // optimistic: if already upvoted, do nothing
+    if (word.user_has_upvoted) return;
+
+    const prev = word.upvotes || 0;
+    setWord({ ...word, upvotes: prev + 1, user_has_upvoted: true });
+
+    const res = await upvoteWord(word.id);
+    // sync with server return
+    setWord(w => w ? ({ ...w, upvotes: res.upvotes ?? (prev + 1), user_has_upvoted: !!res.user_has_upvoted }) : w);
+  } catch (e) {
+    console.error("upvote failed", e);
+    // revert optimistic update on failure
+    setWord(w => w ? ({ ...w, upvotes: (w.upvotes || 1) - 1, user_has_upvoted: false }) : w);
+  }
+};
   return (
     <div className="fiery-bg">
       <div className="glass-card">
@@ -116,7 +143,14 @@ export default function WordPage() {
           </div>
 
           <div className="actions">
-            <button className="btn-glow">👍 {word.upvotes ?? 0}</button>
+            <button
+           className="btn-glow"
+            onClick={handleUpvote}
+            disabled={!!word.user_has_upvoted}
+         title={word.user_has_upvoted ? "Already upvoted" : "Upvote"}
+ >
+   👍 {word.upvotes ?? 0}
+ </button>
             <span className="trend-pill">{word.trend_score ?? 0}</span>
           </div>
         </header>
