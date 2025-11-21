@@ -41,6 +41,16 @@ export default function Home() {
     e.preventDefault();
   };
 
+  const handleLogout = async (e) => {
+    e.preventDefault();
+    try {
+      await logout();
+      //navigate('/');
+    } catch (error) {
+      setErr(error.response?.data?.error || 'Logout failed');
+    }
+  };
+
   const handleUpvote = async (id) => {
     if (!isLoggedIn) {
       navigate('/login');
