@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify
 from app import db
-from app.utils.login import login_required
 from rapidfuzz import fuzz
 from pytrends.request import TrendReq
 from flask_login import login_required, current_user
@@ -102,23 +101,59 @@ def view_word(word_id):
 
 @words_bp.route('/search', methods=['GET'])
 def search():
-    searchTerm = request.args.get('search', '')
-    if not searchTerm:
-        return jsonify({"error": "No search term provided"}), 400
+    from flask_login import current_user
+    q = (request.args.get('search') or '').strip()
+    if not q:
+        return jsonify([]), 200
 
+    try:
+        from rapidfuzz import fuzz
+        use_rf = True
+    except Exception:
+        use_rf = False
+
+    # Only approved words
     all_words = Word.query.filter_by(status='approved').all()
+
+    ql = q.lower()
     results = []
     for w in all_words:
-        score_word = fuzz.partial_ratio(searchTerm.lower(), w.word.lower())
-        score_def = fuzz.partial_ratio(searchTerm.lower(), (w.definition or '').lower())
-        score = max(score_word, score_def)
-        if score > 60:
-            results.append((w, score))
+        w_word = (w.word or '').lower()
+        w_def  = (w.definition or '').lower()
+        w_ex   = (w.examples or '').lower()
 
-    results.sort(key=lambda x: (x[1], x[0].upvotes), reverse=True)
-    matched_words = [r[0].to_dict() for r in results]
+        if use_rf:
+            s1 = fuzz.partial_ratio(ql, w_word)
+            s2 = fuzz.partial_ratio(ql, w_def)
+            s3 = fuzz.partial_ratio(ql, w_ex)
+            score = max(s1, s2, s3)
+            # be a bit more permissive + always allow simple substring on word
+            if score >= 55 or ql in w_word:
+                results.append((w, score))
+        else:
+            # fallback: simple substring across fields
+            if ql in w_word or ql in w_def or ql in w_ex:
+                # weight word matches higher
+                score = 100 if ql in w_word else 80 if ql in w_def else 60
+                results.append((w, score))
 
-    return jsonify(matched_words), 200
+    # sort by match score then upvotes
+    results.sort(key=lambda x: (x[1], x[0].upvotes or 0), reverse=True)
+
+    # add user_has_upvoted flag
+    upvoted_ids = set()
+    if current_user.is_authenticated:
+        upvoted_ids = {wid for (wid,) in db.session.query(Upvote.word_id)
+                       .filter(Upvote.user_id == current_user.id).all()}
+
+    out = []
+    for w, _score in results[:100]:
+        d = w.to_dict()
+        d["user_has_upvoted"] = (w.id in upvoted_ids)
+        out.append(d)
+
+    return jsonify(out), 200
+
 
 @words_bp.route('/add', methods=['POST'])
 @login_required
