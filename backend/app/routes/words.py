@@ -1,11 +1,11 @@
 from flask import Blueprint, request, jsonify
-from app.models import Word
 from app import db
 from app.utils.login import login_required
 from rapidfuzz import fuzz
 from pytrends.request import TrendReq
 from flask_login import login_required, current_user
 from app.models import Word, Upvote
+from sqlalchemy.exc import IntegrityError
 from app import limiter
 from app.utils.embeddings import invalidate_cache
 
@@ -59,19 +59,46 @@ def get_word(word_text):
 @words_bp.route('/', methods=['GET'])
 def index():
     sort_by = request.args.get('sort', 'alphabetical')
+    base_q = Word.query.filter_by(status='approved')
     if sort_by == 'popular':
-        words = Word.query.filter_by(status='approved').order_by(Word.upvotes.desc()).all()
+        base_q = base_q.order_by(Word.upvotes.desc())
     else:
-        words = Word.query.filter_by(status='approved').order_by(Word.word.asc()).all()
+        base_q = base_q.order_by(Word.word.asc())
 
-    return jsonify([w.to_dict() for w in words]), 200
+    words = base_q.all()
+
+    # Build a set of word_ids the current user has upvoted (single query)
+    upvoted_ids = set()
+    if current_user.is_authenticated:
+        upvoted_ids = {
+            u.word_id for u in Upvote.query
+                .filter_by(user_id=current_user.id)
+                .with_entities(Upvote.word_id).all()
+        }
+
+    out = []
+    for w in words:
+        d = w.to_dict()
+        d["user_has_upvoted"] = (w.id in upvoted_ids)
+        out.append(d)
+    return jsonify(out), 200
 
 @words_bp.route('/<int:word_id>', methods=['GET'])
 def view_word(word_id):
     word = Word.query.get(word_id)
     if not word:
         return jsonify({"error": "Word not found"}), 404
-    return jsonify(word.to_dict()), 200
+
+    data = word.to_dict()
+
+    # Add user_has_upvoted flag
+    user_has_upvoted = False
+    if current_user.is_authenticated:
+        existing = Upvote.query.filter_by(user_id=current_user.id, word_id=word_id).first()
+        user_has_upvoted = existing is not None
+
+    data["user_has_upvoted"] = user_has_upvoted
+    return jsonify(data), 200
 
 @words_bp.route('/search', methods=['GET'])
 def search():
@@ -131,17 +158,29 @@ def add_word():
 
 
 @words_bp.route('/upvote/<int:word_id>', methods=['POST'])
-@limiter.limit("30/minute;200/day")  # burst + daily cap
 @login_required
 def upvote(word_id):
     word = Word.query.get(word_id)
     if not word:
         return jsonify({"error": "Word not found"}), 404
 
-    if Upvote.query.filter_by(user_id=current_user.id, word_id=word_id).first():
-        return jsonify({"error": "Already upvoted"}), 400
+    # If already upvoted, return current count (idempotent)
+    existing = Upvote.query.filter_by(user_id=current_user.id, word_id=word_id).first()
+    if existing:
+        return jsonify({"upvotes": word.upvotes, "user_has_upvoted": True}), 200
 
-    db.session.add(Upvote(user_id=current_user.id, word_id=word_id))
-    word.upvotes += 1
-    db.session.commit()
-    return jsonify({"upvotes": word.upvotes}), 200
+    try:
+        # Create upvote row (unique constraint enforces one per user/word)
+        up = Upvote(user_id=current_user.id, word_id=word_id)
+        db.session.add(up)
+
+        # Increment counter
+        word.upvotes = (word.upvotes or 0) + 1
+        db.session.commit()
+        return jsonify({"upvotes": word.upvotes, "user_has_upvoted": True}), 200
+
+    except IntegrityError:
+        # Another request beat us to it; refresh count and return
+        db.session.rollback()
+        db.session.refresh(word)
+        return jsonify({"upvotes": word.upvotes, "user_has_upvoted": True}), 200
