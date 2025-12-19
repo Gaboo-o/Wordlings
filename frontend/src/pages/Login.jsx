@@ -33,7 +33,31 @@ export default function Login() {
     }}>
       <h2 style={{ marginBottom: '1.5rem' }}>Login</h2>
 
-      {err && <div style={{ color: 'red', marginBottom: '1rem' }}>{err}</div>}
+       {err && <div style={{ color: 'red', marginBottom: '1rem' }}>{err}</div>}
+
+      <button
+  type="button"
+  onClick={() => window.location.href = "/api/auth/google/login"}
+  style={{
+    width: "100%",
+    padding: "0.7rem",
+    borderRadius: 8,
+    border: "1px solid #ddd",
+    backgroundColor: "white",
+    cursor: "pointer",
+    marginBottom: "1rem",
+    fontSize: "0.95rem"
+  }}
+>
+  🔐 Continue with Google
+</button>
+
+<div style={{ margin: "1rem 0", color: "#999" }}>
+  — or —
+</div>
+
+
+     
 
       <form onSubmit={submit} style={{ display: 'grid', gap: 12 }}>
         <input

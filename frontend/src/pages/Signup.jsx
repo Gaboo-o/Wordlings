@@ -35,6 +35,28 @@ export default function Signup() {
 
       {err && <div style={{ color: 'red', marginBottom: '1rem' }}>{err}</div>}
 
+      <button
+  type="button"
+  onClick={() => window.location.href = "/api/auth/google/login"}
+  style={{
+    width: "100%",
+    padding: "0.7rem",
+    borderRadius: 8,
+    border: "1px solid #ddd",
+    backgroundColor: "white",
+    cursor: "pointer",
+    marginBottom: "1rem",
+    fontSize: "0.95rem"
+  }}
+>
+  🔐 Sign up with Google
+</button>
+
+<div style={{ margin: "1rem 0", color: "#999" }}>
+  — or —
+</div>
+
+
       <form onSubmit={submit} style={{ display: 'grid', gap: 12 }}>
         <input
           placeholder="Username"
