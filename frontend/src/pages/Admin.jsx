@@ -41,7 +41,7 @@ export default function Admin() {
         <div key={w.id} style={{ border: '1px solid #ddd', padding: 12, marginBottom: 10 }}>
           <strong>{w.word}</strong>
           <p>{w.definition}</p>
-          <p><em>Submitted by: </em>{w.submitted_by}</p>
+          <p><em>Submitted by: </em>{w.submitted_by_username || "Unknown"}</p>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => approve(w.id)}>Approve</button>
             <button onClick={() => reject(w.id)}>Reject</button>

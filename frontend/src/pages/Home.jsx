@@ -11,7 +11,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const [err, setErr] = useState("");
   const isLoggedIn = !!user;
   const username = user ? user.username || 'You' : 'Guest';
 
@@ -41,13 +42,11 @@ export default function Home() {
     e.preventDefault();
   };
 
-  const handleLogout = async (e) => {
-    e.preventDefault();
+  const handleLogout = async () => {
     try {
       await logout();
-      //navigate('/');
     } catch (error) {
-      setErr(error.response?.data?.error || 'Logout failed');
+      console.error("Logout failed", error);
     }
   };
 
@@ -77,13 +76,6 @@ export default function Home() {
       <h1>Wordlings</h1>
       <p>Welcome, {username}</p>
 
-      {/* ✅ Admin button remains */}
-      {user?.is_admin && (
-        <button onClick={() => navigate('/admin')}>
-          Admin Dashboard
-        </button>
-      )}
-
       <form onSubmit={handleSearch}>
         <input
           placeholder="Search words..."
@@ -97,7 +89,7 @@ export default function Home() {
         <button type="submit">Search</button>
       </form>
 
-      <button onClick={() => navigate('/add')} disabled={!isLoggedIn}>
+      <button onClick={() => navigate('/add')}>
         Add Word
       </button>
 
