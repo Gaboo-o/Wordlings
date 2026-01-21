@@ -1,22 +1,29 @@
-import axios from 'axios';
+import axios from "axios";
+import { csrfHeader } from "./_csrf";
 
 export const login = async (username, password) => {
-  const res = await axios.post('/api/auth/login', { username, password });
-  // backend may return { redirect: "...", ... } - keep whole payload
+  const res = await axios.post(
+    "/api/auth/login",
+    { username, password },
+    { withCredentials: true, headers: csrfHeader() }
+  );
   return res.data;
 };
 
 export const signup = async (username, password) => {
-  const res = await axios.post('/api/auth/signup', { username, password });
+  const res = await axios.post(
+    "/api/auth/signup",
+    { username, password },
+    { withCredentials: true, headers: csrfHeader() }
+  );
   return res.data;
 };
 
 export const logout = async () => {
-  // backend logout endpoint (POST)
-  try {
-    await axios.post('/api/auth/logout');
-  } catch (e) {
-    // ignore network errors
-  }
-  return { message: 'logged out' };
+  await axios.post(
+    "/api/auth/logout",
+    {},
+    { withCredentials: true, headers: csrfHeader() }
+  );
+  return { message: "logged out" };
 };

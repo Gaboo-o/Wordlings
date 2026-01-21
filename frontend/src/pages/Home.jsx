@@ -1,30 +1,49 @@
 import { useEffect, useState } from 'react';
-import { fetchWords, searchWords, upvoteWord } from '../api/words';
 import { useNavigate } from 'react-router-dom';
 
-import  WordCard  from '../components/WordCard';
+import { fetchWords, searchWords } from '../api/words';
+import { useAuth } from '../context/AuthContext';
 
+import GalaxyShell from '../components/layout/GalaxyShell';
+import MeteorField from '../components/galaxy/MeteorField';
+
+/*
+  Home
+  Main dictionary page.
+
+  Notes:
+  - Wrapped in GalaxyShell to share the same star background as other pages.
+  - Meteors are intentionally only rendered on Home.
+*/
 export default function Home() {
   const [words, setWords] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sort, setSort] = useState('alphabetical');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const isLoggedIn = !!user;
+  const username = user ? user.username || 'You' : 'Guest';
+
+  /*
+    loadWords
+    Loads words from the API, using either search or sorting.
+  */
   const loadWords = async () => {
     setLoading(true);
     try {
-        let data;
-        if (searchTerm.trim()) {
-            data = await searchWords(searchTerm);
-        } else {
-            data = await fetchWords({ sort });
-        }
-        setWords(data);
+      const data = searchTerm.trim()
+        ? await searchWords(searchTerm)
+        : await fetchWords({ sort });
+
+      setWords(Array.isArray(data) ? data : []);
     } catch (error) {
-        console.error("Failed to load words:", error);
+      console.error('Failed to load words:', error);
+      setWords([]);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -32,57 +51,53 @@ export default function Home() {
     loadWords();
   }, [sort, searchTerm]);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-
-  };
-
-  const handleUpvote = async (id) => {
-    await upvoteWord(id);
-    setWords(words.map(w => w.id === id ? { ...w, upvotes: w.upvotes + 1 } : w));
+  /*
+    handleLogout
+    Logs the user out using AuthContext.
+  */
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (e) {
+      console.error('Logout failed:', e);
+    }
   };
 
   return (
-  <div style={{ padding: '24px' }}>
-    <h1 style={{ textAlign: 'center' }}>🔥 Wordlings</h1>
+    <GalaxyShell variant="default">
+      <MeteorField words={words} query={searchTerm} />
 
-    {/* Search & Sort */}
-    <form onSubmit={handleSearch} style={{ display:'flex', marginBottom:'16px', gap:'8px', justifyContent: 'center' }}>
-      <input
-        placeholder="Search words..."
-        value={searchTerm}
-        onChange={e => setSearchTerm(e.target.value)}
-        style={{ padding:'8px', width:'300px', borderRadius:'8px', border:'1px solid #ccc' }}
-      />
-      <select value={sort} onChange={e => setSort(e.target.value)} style={{ padding:'8px', borderRadius:'8px' }}>
-        <option value="alphabetical">A–Z</option>
-        <option value="popular">Most Upvoted</option>
-      </select>
-      <button type="submit" style={{ padding:'8px 16px' }}>Search</button>
-    </form>
+      <div className="galaxy-ui">
+        <p>Welcome, {username}</p>
 
-    {/* Add Word */}
-    <div style={{ textAlign: 'center', marginBottom:'24px' }}>
-      <button onClick={() => navigate('/add')} style={{ padding:'8px 16px' }}>
-        ➕ Add Word
-      </button>
-    </div>
+        {user?.is_admin ? (
+          <button className="app-button" onClick={() => navigate('/admin')}>
+            Admin Dashboard
+          </button>
+        ) : null}
 
-    {/* WordCard Grid */}
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-      gap: '20px'
-    }}>
-      {words.map(w => (
-        <WordCard
-          key={w.id}
-          word={{ ...w, onUpvote: handleUpvote }}
-          onClick={() => navigate(`/word/${w.id}`)}
-        />
-      ))}
-    </div>
-  </div>
-);
+        <form onSubmit={(e) => e.preventDefault()} className="home-controls">
+          <input
+            className="app-input"
+            placeholder="Search words..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
 
+          <div className="row-wrap">
+            <button className="app-button" type="button" onClick={() => navigate('/add')}>
+              Add Word
+            </button>
+
+            <button className="app-button" type="button" onClick={handleLogout} disabled={!isLoggedIn}>
+              Logout
+            </button>
+          </div>
+        </form>
+
+        {loading ? <p>Loading...</p> : null}
+      </div>
+    </GalaxyShell>
+  );
 }
