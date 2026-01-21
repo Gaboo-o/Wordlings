@@ -1,14 +1,27 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 
+import { useAuth } from '../context/AuthContext';
+import GalaxyShell from '../components/layout/GalaxyShell';
+import AuthCard from '../components/layout/AuthCard';
+
+/*
+  Login
+  Authentication page wrapped in GalaxyShell.
+  Uses shared AuthCard and theme styles to avoid duplicated inline styling.
+*/
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
 
+  /*
+    submit
+    Attempts to log in and redirects to the home page.
+  */
   const submit = async (e) => {
     e.preventDefault();
     try {
@@ -19,106 +32,41 @@ export default function Login() {
     }
   };
 
-  return (
-    <div style={{
-      maxWidth: 400,
-      margin: '80px auto',
-      padding: '2rem',
-      border: '1px solid #ddd',
-      borderRadius: 12,
-      boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
-      backgroundColor: '#fff',
-      textAlign: 'center',
-      fontFamily: 'sans-serif'
-    }}>
-      <h2 style={{ marginBottom: '1.5rem' }}>Login</h2>
-
-       {err && <div style={{ color: 'red', marginBottom: '1rem' }}>{err}</div>}
-
-      <button
-  type="button"
-  onClick={() => window.location.href = "/api/auth/google/login"}
-  style={{
-    width: "100%",
-    padding: "0.7rem",
-    borderRadius: 8,
-    border: "1px solid #ddd",
-    backgroundColor: "white",
-    cursor: "pointer",
-    marginBottom: "1rem",
-    fontSize: "0.95rem"
-  }}
->
-  🔐 Continue with Google
-</button>
-
-<div style={{ margin: "1rem 0", color: "#999" }}>
-  — or —
-</div>
-
-
-     
-
-      <form onSubmit={submit} style={{ display: 'grid', gap: 12 }}>
-        <input
-          placeholder="Username"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-          required
-          style={{
-            padding: '0.6rem 0.8rem',
-            borderRadius: 8,
-            border: '1px solid #ccc',
-            fontSize: '1rem'
-          }}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-          style={{
-            padding: '0.6rem 0.8rem',
-            borderRadius: 8,
-            border: '1px solid #ccc',
-            fontSize: '1rem'
-          }}
-        />
-        <button
-          type="submit"
-          style={{
-            padding: '0.7rem 0.8rem',
-            borderRadius: 8,
-            backgroundColor: '#007BFF',
-            color: 'white',
-            border: 'none',
-            fontSize: '1rem',
-            cursor: 'pointer'
-          }}
-        >
-          Login
-        </button>
-      </form>
-
-      {/* Signup link */}
-      <div style={{ marginTop: '1.5rem', fontSize: '0.95rem', color: '#555' }}>
-        Don’t have an account?{' '}
-        <button
-          type="button"
-          onClick={() => navigate('/signup')}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#007BFF',
-            textDecoration: 'underline',
-            cursor: 'pointer',
-            fontSize: '0.95rem'
-          }}
-        >
-          Sign up
-        </button>
-      </div>
+  const footer = (
+    <div>
+      Don’t have an account?{' '}
+      <button type="button" className="link-button" onClick={() => navigate('/signup')}>
+        Sign up
+      </button>
     </div>
+  );
+
+  return (
+    <GalaxyShell variant="auth">
+      <div className="centered">
+        <AuthCard title="Login" error={err} footer={footer}>
+          <form onSubmit={submit} className="form-grid">
+            <input
+              className="app-input"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+            <input
+              className="app-input"
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <button className="app-button" type="submit">
+              Login
+            </button>
+          </form>
+        </AuthCard>
+      </div>
+    </GalaxyShell>
   );
 }

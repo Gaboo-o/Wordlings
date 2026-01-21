@@ -1,0 +1,97 @@
+/*
+  galaxy.css
+  Reusable galaxy background.
+
+  Usage:
+  - Wrap any page in <GalaxyShell> to get this background.
+  - Pages that do not need meteors simply do not render the MeteorField component.
+
+  Design adjustments should be made by modifying CSS variables (either in :root or per-variant classes).
+*/
+
+.galaxy-shell {
+  position: relative;
+  min-height: 100vh;
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+/*
+  Variant overrides.
+  Auth pages typically look better with a calmer background.
+*/
+.galaxy-shell--auth {
+  --stars-opacity-1: 0.40;
+  --stars-opacity-2: 0.55;
+  --stars-twinkle-1: 7s;
+  --stars-twinkle-2: 11s;
+}
+
+/* Default starfield variables */
+.galaxy-shell {
+  --stars-opacity-1: 0.55;
+  --stars-opacity-2: 0.80;
+  --stars-drift-1: 160s;
+  --stars-drift-2: 260s;
+  --stars-twinkle-1: 6s;
+  --stars-twinkle-2: 9s;
+
+  /* Star tiling and drift distance */
+  --stars-layer1-size: 400px 400px;
+  --stars-layer2-size: 600px 600px;
+  --stars-drift-distance: 600px;
+}
+
+/*
+  Two layers of stars.
+  Radial gradients are used instead of image textures so there are no asset dependencies.
+*/
+.galaxy-shell::before,
+.galaxy-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-repeat: repeat;
+  pointer-events: none;
+}
+
+.galaxy-shell::before {
+  opacity: var(--stars-opacity-1);
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, rgba(255,255,255,0.95), transparent),
+    radial-gradient(1px 1px at 110px 90px, rgba(255,255,255,0.85), transparent),
+    radial-gradient(2px 2px at 240px 160px, rgba(255,255,255,0.90), transparent),
+    radial-gradient(1px 1px at 320px 240px, rgba(255,255,255,0.75), transparent);
+  background-size: var(--stars-layer1-size);
+  animation:
+    galaxy-drift var(--stars-drift-1) linear infinite,
+    galaxy-twinkle var(--stars-twinkle-1) ease-in-out infinite;
+}
+
+.galaxy-shell::after {
+  opacity: var(--stars-opacity-2);
+  background-image:
+    radial-gradient(2px 2px at 60px 60px, rgba(255,255,255,0.85), transparent),
+    radial-gradient(1px 1px at 180px 140px, rgba(255,255,255,0.70), transparent),
+    radial-gradient(1px 1px at 280px 320px, rgba(255,255,255,0.90), transparent);
+  background-size: var(--stars-layer2-size);
+  animation:
+    galaxy-drift var(--stars-drift-2) linear infinite,
+    galaxy-twinkle var(--stars-twinkle-2) ease-in-out infinite;
+}
+
+@keyframes galaxy-drift {
+  from { transform: translate(0, 0); }
+  to   { transform: translate(calc(-1 * var(--stars-drift-distance)), calc(-1 * var(--stars-drift-distance))); }
+}
+
+@keyframes galaxy-twinkle {
+  0%, 100% { filter: brightness(0.85); }
+  50%      { filter: brightness(1.15); }
+}
+
+/* A content layer that sits above the starfield */
+.galaxy-content {
+  position: relative;
+  z-index: 10;
+}

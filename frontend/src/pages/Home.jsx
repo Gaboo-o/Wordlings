@@ -1,35 +1,46 @@
-import { useEffect, useState } from "react";
-import { fetchWords, searchWords, upvoteWord } from "../api/words";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import WordCard from "../components/WordCard";
-import "../style/Galaxy.css";
-import MeteorField from "../components/MeteorField";
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
+import { fetchWords, searchWords } from '../api/words';
+import { useAuth } from '../context/AuthContext';
+
+import GalaxyShell from '../components/layout/GalaxyShell';
+import MeteorField from '../components/galaxy/MeteorField';
+
+/*
+  Home
+  Main dictionary page.
+
+  Notes:
+  - Wrapped in GalaxyShell to share the same star background as other pages.
+  - Meteors are intentionally only rendered on Home.
+*/
 export default function Home() {
   const [words, setWords] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sort, setSort] = useState("alphabetical");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sort, setSort] = useState('alphabetical');
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [err, setErr] = useState("");
-  const isLoggedIn = !!user;
-  const username = user ? user.username || "You" : "Guest";
 
+  const isLoggedIn = !!user;
+  const username = user ? user.username || 'You' : 'Guest';
+
+  /*
+    loadWords
+    Loads words from the API, using either search or sorting.
+  */
   const loadWords = async () => {
     setLoading(true);
     try {
-      let data;
-      if (searchTerm.trim()) {
-        data = await searchWords(searchTerm);
-      } else {
-        data = await fetchWords({ sort });
-      }
+      const data = searchTerm.trim()
+        ? await searchWords(searchTerm)
+        : await fetchWords({ sort });
+
       setWords(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Failed to load words:", error);
+      console.error('Failed to load words:', error);
       setWords([]);
     } finally {
       setLoading(false);
@@ -40,87 +51,53 @@ export default function Home() {
     loadWords();
   }, [sort, searchTerm]);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-  };
-
+  /*
+    handleLogout
+    Logs the user out using AuthContext.
+  */
   const handleLogout = async () => {
     try {
       await logout();
-    } catch (error) {
-      console.error("Logout failed", error);
-    }
-  };
-
-  const handleUpvote = async (id) => {
-    if (!isLoggedIn) {
-      navigate("/login");
-      return;
-    }
-    try {
-      const already = words.find((w) => w.id === id)?.user_has_upvoted;
-      if (already) return;
-
-      const res = await upvoteWord(id);
-
-      setWords((ws) =>
-        ws.map((w) =>
-          w.id === id
-            ? {
-                ...w,
-                upvotes: res.upvotes ?? w.upvotes,
-                user_has_upvoted: !!res.user_has_upvoted,
-              }
-            : w
-        )
-      );
+      navigate('/');
     } catch (e) {
-      console.error("Upvote failed:", e);
+      console.error('Logout failed:', e);
     }
   };
 
   return (
-    <div className="galaxy-bg">
-      <div className="foreground-ui">
-        <h1 className="title">Wordlings</h1>
-        <p className="title">Welcome, {username}</p>
+    <GalaxyShell variant="default">
+      <MeteorField words={words} query={searchTerm} />
 
-        <div className="center-search">
-          <form onSubmit={handleSearch}>
-            <input
-              placeholder="Search words..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <select value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="alphabetical">A–Z</option>
-              <option value="popular">Most Upvoted</option>
-            </select>
-            <button type="submit">Search</button>
-          </form>
-        </div>
-      </div>
+      <div className="galaxy-ui">
+        <p>Welcome, {username}</p>
 
-      <button onClick={() => navigate("/add")}>Add Word</button>
+        {user?.is_admin ? (
+          <button className="app-button" onClick={() => navigate('/admin')}>
+            Admin Dashboard
+          </button>
+        ) : null}
 
-      <button onClick={handleLogout}>Logout</button>
-
-      {user?.is_admin && (
-        <button onClick={() => navigate("/admin")}>Admin Dashboard</button>
-      )}
-
-      {loading && <p>Loading...</p>}
-
-      {/* <div>
-        {words.map((w) => (
-          <WordCard
-            key={w.id}
-            word={{ ...w, onUpvote: handleUpvote }}
-            onClick={() => navigate(`/word/${w.id}`)}
+        <form onSubmit={(e) => e.preventDefault()} className="home-controls">
+          <input
+            className="app-input"
+            placeholder="Search words..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
-        ))}
-      </div> */}
-      <MeteorField words={words} />
-    </div>
+
+          <div className="row-wrap">
+            <button className="app-button" type="button" onClick={() => navigate('/add')}>
+              Add Word
+            </button>
+
+            <button className="app-button" type="button" onClick={handleLogout} disabled={!isLoggedIn}>
+              Logout
+            </button>
+          </div>
+        </form>
+
+        {loading ? <p>Loading...</p> : null}
+      </div>
+    </GalaxyShell>
   );
 }
