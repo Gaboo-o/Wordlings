@@ -5,6 +5,7 @@ import Signup from './pages/Signup';
 import Admin from './pages/Admin';
 import Add from './pages/Add';
 import WordPage from './pages/WordPage';
+import Submissions from './pages/Submissions';
 import { AuthProvider } from './context/AuthContext';
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/add" element={<Add />} />
+          <Route path="/submissions" element={<Submissions />} />
           <Route path="/word/:id" element={<WordPage />} />
         </Routes>
       </AuthProvider>

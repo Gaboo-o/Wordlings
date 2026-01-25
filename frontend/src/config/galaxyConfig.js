@@ -32,6 +32,16 @@ export const GALAXY_CONFIG = {
   FLY_SPEED_PX_PER_FRAME: 2,
   FLY_DESPAWN_MARGIN_PX: 260,
 
+  // Flying meteor visuals
+  // Size scales with upvotes using a clamped logarithmic curve.
+  FLY_SIZE_MIN_PX: 18,
+  FLY_SIZE_MAX_PX: 46,
+  FLY_SIZE_LOG_MULT: 5,
+
+  // Flying meteor visual variants
+  // The top N words by upvotes are rendered as ships.
+  FLY_SHIP_TOP_N: 10,
+
   // Orbit animation
   ORBIT_CENTER_LEFT: '50%',
   ORBIT_CENTER_TOP: '50%',
@@ -41,6 +51,28 @@ export const GALAXY_CONFIG = {
   ORBIT_RADIUS_MIN_PX: 80,
   ORBIT_RADIUS_MATCH_SPREAD_PX: 140,
   ORBIT_RADIUS_INDEX_STEP_PX: 10,
+
+
+  // Home hero text
+  HOME_APP_NAME: 'Wordlings',
+  HOME_TAGLINE: 'Words out of this world.',
+  HOME_SEARCH_PLACEHOLDER: 'Search words...',
+
+  // Orbit action menu (planet + moons)
+  ORBIT_MENU_CORNER_OFFSET_PX: 32,
+  ORBIT_MENU_ORBIT_RADIUS_PX: 120,
+  ORBIT_MENU_PLANET_SIZE_PX: 66,
+  ORBIT_MENU_MOON_SIZE_PX: 44,
+  ORBIT_MENU_ICON_SIZE_PX: 18,
+  ORBIT_MENU_ORBIT_DURATION_S: 10,
+  ORBIT_MENU_ORBIT_DURATION_STEP_S: 2,
+  ORBIT_MENU_MAX_MOONS_PER_RING: 6,
+  ORBIT_MENU_MIN_RINGS: 2,
+  ORBIT_MENU_RING_RADIUS_STEP_PX: 26,
+  ORBIT_MENU_STACK_GAP_PX: 56,
+  ORBIT_MENU_LABEL_GAP_PX: 12,
+  ORBIT_MENU_LABEL_ROTATE_MAX_DEG: 18,
+
 };
 
 // Non-tunable math helpers.

@@ -1,43 +1,54 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { fetchWords, searchWords } from '../api/words';
+import { fetchWords, searchWords, upvoteWord } from '../api/words';
 import { useAuth } from '../context/AuthContext';
 
 import GalaxyShell from '../components/layout/GalaxyShell';
 import MeteorField from '../components/galaxy/MeteorField';
+import OrbitActionMenu from '../components/galaxy/OrbitActionMenu';
+
+import useDebouncedValue from '../hooks/useDebouncedValue';
+import { GALAXY_CONFIG } from '../config/galaxyConfig';
+import { ListIcon, LogoutIcon, PlusIcon, ShieldIcon } from '../components/ui/Icons';
 
 /*
   Home
   Main dictionary page.
 
+  Requirements:
+  - Center the title + tagline + search bar (hero layout).
+  - Keep meteors only on the Home page.
+  - Provide actions through a bottom-right orbit menu (planet + moons).
+
   Notes:
-  - Wrapped in GalaxyShell to share the same star background as other pages.
-  - Meteors are intentionally only rendered on Home.
+  - Sorting is intentionally excluded.
+  - This version prioritizes simplicity and visual consistency.
 */
 export default function Home() {
   const [words, setWords] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sort, setSort] = useState('alphabetical');
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
   const isLoggedIn = !!user;
-  const username = user ? user.username || 'You' : 'Guest';
+  const isAdmin = !!user?.is_admin;
+
+  // Debounce API-driven search so we don't fire a request on every keystroke.
+  const debouncedSearch = useDebouncedValue(searchTerm, GALAXY_CONFIG.SEARCH_DELAY_MS);
 
   /*
     loadWords
-    Loads words from the API, using either search or sorting.
+    Loads either a full list of words or a search result set.
   */
   const loadWords = async () => {
     setLoading(true);
-    try {
-      const data = searchTerm.trim()
-        ? await searchWords(searchTerm)
-        : await fetchWords({ sort });
 
+    try {
+      const q = debouncedSearch.trim();
+      const data = q ? await searchWords(q) : await fetchWords();
       setWords(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to load words:', error);
@@ -49,7 +60,40 @@ export default function Home() {
 
   useEffect(() => {
     loadWords();
-  }, [sort, searchTerm]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
+
+  /*
+    handleUpvote
+    Upvotes a word and updates local state if the user is logged in.
+  */
+  const handleUpvote = async (id) => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const already = words.find((w) => w.id === id)?.user_has_upvoted;
+      if (already) return;
+
+      const res = await upvoteWord(id);
+
+      setWords((ws) =>
+        ws.map((w) =>
+          w.id === id
+            ? {
+                ...w,
+                upvotes: res.upvotes ?? w.upvotes,
+                user_has_upvoted: !!res.user_has_upvoted,
+              }
+            : w
+        )
+      );
+    } catch (e) {
+      console.error('Upvote failed:', e);
+    }
+  };
 
   /*
     handleLogout
@@ -64,40 +108,72 @@ export default function Home() {
     }
   };
 
+  /*
+    menuItems
+    Defines the orbit menu's actions. Items are filtered by the menu component via `show`.
+  */
+  const iconSize = GALAXY_CONFIG.ORBIT_MENU_ICON_SIZE_PX;
+
+  const menuItems = [
+    {
+      key: 'add',
+      label: 'Add',
+      icon: <PlusIcon size={iconSize} />,
+      show: true,
+      onClick: () => {
+        navigate(isLoggedIn ? '/add' : '/login');
+      },
+    },
+    {
+      key: 'submissions',
+      label: 'Submissions',
+      icon: <ListIcon size={iconSize} />,
+      show: isLoggedIn,
+      onClick: () => navigate('/submissions'),
+    },
+    {
+      key: 'admin',
+      label: 'Admin',
+      icon: <ShieldIcon size={iconSize} />,
+      show: isAdmin,
+      onClick: () => navigate('/admin'),
+    },
+    {
+      key: 'logout',
+      label: 'Logout',
+      icon: <LogoutIcon size={iconSize} />,
+      show: isLoggedIn,
+      onClick: handleLogout,
+    },
+  ];
+
   return (
     <GalaxyShell variant="default">
       <MeteorField words={words} query={searchTerm} />
 
       <div className="galaxy-ui">
-        <p>Welcome, {username}</p>
+        <div className="home-page">
+          <section className="home-hero">
+            <div className="home-hero-inner">
+              <h1 className="home-title">{GALAXY_CONFIG.HOME_APP_NAME}</h1>
+              <p className="home-tagline">{GALAXY_CONFIG.HOME_TAGLINE}</p>
 
-        {user?.is_admin ? (
-          <button className="app-button" onClick={() => navigate('/admin')}>
-            Admin Dashboard
-          </button>
-        ) : null}
+              <form className="home-search" onSubmit={(e) => e.preventDefault()}>
+                <input
+                  className="app-input home-search-input"
+                  placeholder={GALAXY_CONFIG.HOME_SEARCH_PLACEHOLDER}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </form>
 
-        <form onSubmit={(e) => e.preventDefault()} className="home-controls">
-          <input
-            className="app-input"
-            placeholder="Search words..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-
-          <div className="row-wrap">
-            <button className="app-button" type="button" onClick={() => navigate('/add')}>
-              Add Word
-            </button>
-
-            <button className="app-button" type="button" onClick={handleLogout} disabled={!isLoggedIn}>
-              Logout
-            </button>
-          </div>
-        </form>
-
-        {loading ? <p>Loading...</p> : null}
+              {loading ? <p className="muted home-loading">Loading...</p> : null}
+            </div>
+          </section>
+        </div>
       </div>
+
+      <OrbitActionMenu items={menuItems} />
     </GalaxyShell>
   );
 }

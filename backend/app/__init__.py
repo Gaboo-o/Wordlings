@@ -35,9 +35,11 @@ from .routes.similar import similar_bp
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-change-me')
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///dictionary.db')
+    if SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
+        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_SAMESITE = 'Lax'
-    SESSION_COOKIE_SECURE = False  # True in prod
+    SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"
     MAX_CONTENT_LENGTH = 1 * 1024 * 1024  # 1 MB
 
 def create_app():
@@ -70,9 +72,9 @@ def create_app():
     )
 
     # CORS
-    CORS(app, supports_credentials=True, resources={
-        r"/api/*": {"origins": "http://localhost:5173"}
-    })
+    cors_origins = os.environ.get("CORS_ORIGINS", "http://localhost:5173")
+    cors_origins = [o.strip() for o in cors_origins.split(",") if o.strip()]
+    CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": cors_origins}})
 
     # DB
     db.init_app(app)

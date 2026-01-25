@@ -1,75 +1,52 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import {
-  fetchWordById,
-  fetchSimilar,
-  fetchTrends,
-  upvoteWord,
-} from "../api/words";
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+
+import { useAuth } from '../context/AuthContext';
+import * as wordsApi from '../api/words';
+import GalaxyShell from '../components/layout/GalaxyShell';
 
 import {
-  LineChart,
+  CartesianGrid,
   Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer,
-} from "recharts";
+} from 'recharts';
 
-import "../style/WordPage.css";
-import "../style/FloatingSimilar.css";
+/*
+  Local constants
+  Kept near the top so this page is easy to tune without searching through JSX.
+*/
+const SIMILAR_LIMIT = 12;
+const TRENDING_THRESHOLD = 70;
+const TREND_CHART_HEIGHT_PX = 300;
 
-function FloatingSimilar({ centerWord, items = [], onClick }) {
-  const rings = [110, 160, 210];
+/*
+  WordPage
+  Displays details for a single word (definition, examples, metadata) and related content.
 
-  const placed = items.slice(0, 18).map((n, i) => {
-    const ring = rings[i % rings.length];
-    const angle =
-      i * (360 / Math.max(items.length, 1)) + ((i * 13) % 20);
-    const rad = (angle * Math.PI) / 180;
-    const x = ring * Math.cos(rad);
-    const y = ring * Math.sin(rad);
-    return { ...n, x, y };
-  });
-
-  return (
-    <div className="floating-container">
-      <div className="floating-center">{centerWord}</div>
-
-      <svg className="floating-rings" viewBox="-210 -210 420 420">
-        {rings.map((r, idx) => (
-          <circle key={idx} cx="0" cy="0" r={r} className="floating-ring" />
-        ))}
-      </svg>
-
-      {placed.map((n) => (
-        <button
-          key={n.id}
-          className="floating-node"
-          style={{
-            left: "50%",
-            top: "50%",
-            transform: `translate(calc(-50% + ${n.x}px), calc(-50% + ${n.y}px))`,
-          }}
-          title={`similarity: ${Number(n.score || 0).toFixed(2)}`}
-          onClick={() => onClick?.(n)}
-        >
-          {n.word}
-        </button>
-      ))}
-    </div>
-  );
-}
-
+  Notes:
+  - Wrapped in GalaxyShell for consistent background.
+  - Uses simple, themed layout primitives (app-card, item-card, chip, status-pill).
+*/
 export default function WordPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [word, setWord] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [similar, setSimilar] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
+  const isLoggedIn = !!user;
+
+  /*
+    load
+    Fetches the word, trend data, and similar words.
+  */
   useEffect(() => {
     if (!id) return;
 
@@ -77,35 +54,48 @@ export default function WordPage() {
 
     const load = async () => {
       setLoading(true);
+      setError('');
       try {
         // 1) Load word data
-        const data = await fetchWordById(id);
+        const data = await wordsApi.fetchWordById(id);
         const wordData = Array.isArray(data) ? data[0] : data;
 
         if (!mounted) return;
         setWord(wordData || null);
 
-        // 2) Fetch trends and merge into word state (safe)
-        if (wordData?.word) {
-          const t = await fetchTrends(wordData.word);
-          if (mounted) {
-            setWord((current) => ({
-              ...(current || wordData),
-              trend: t?.trend || [],
-              topRegion: t?.topRegion || null,
-            }));
+        // 2) Fetch trend metadata if available
+        if (wordData?.word && wordsApi.fetchTrends) {
+          try {
+            const t = await wordsApi.fetchTrends(wordData.word);
+            if (mounted) {
+              setWord((current) => ({
+                ...(current || wordData),
+                trend: t?.trend || [],
+                topRegion: t?.topRegion || null,
+              }));
+            }
+          } catch (e) {
+            // Trend data is optional; do not fail the entire page.
+            console.warn('Trend fetch failed:', e);
           }
         }
 
         // 3) Fetch similar words
-        const sims = await fetchSimilar({ wordId: Number(id), limit: 12 });
-        if (!mounted) return;
-        setSimilar(Array.isArray(sims) ? sims : []);
-      } catch (err) {
-        console.error("WordPage load error:", err);
+        if (wordsApi.fetchSimilar) {
+          try {
+            const sims = await wordsApi.fetchSimilar({ wordId: Number(id), limit: SIMILAR_LIMIT });
+            if (mounted) setSimilar(Array.isArray(sims) ? sims : []);
+          } catch (e) {
+            console.warn('Similar fetch failed:', e);
+            if (mounted) setSimilar([]);
+          }
+        }
+      } catch (e) {
+        console.error('WordPage load error:', e);
         if (mounted) {
           setWord(null);
           setSimilar([]);
+          setError('Word not found or failed to load.');
         }
       } finally {
         if (mounted) setLoading(false);
@@ -113,136 +103,189 @@ export default function WordPage() {
     };
 
     load();
+
     return () => {
       mounted = false;
     };
   }, [id]);
 
+  /*
+    handleUpvote
+    Upvotes a word (requires login). Uses an optimistic update.
+  */
   const handleUpvote = async () => {
     if (!word) return;
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
 
     try {
-      // if already upvoted, do nothing
       if (word.user_has_upvoted) return;
 
-      // optimistic UI update
-      const prev = word.upvotes || 0;
-      setWord({ ...word, upvotes: prev + 1, user_has_upvoted: true });
+      // Optimistic UI update
+      const prevUpvotes = word.upvotes || 0;
+      setWord({ ...word, upvotes: prevUpvotes + 1, user_has_upvoted: true });
 
-      // server truth
-      const res = await upvoteWord(word.id);
-      setWord((w) =>
-        w
+      const res = await wordsApi.upvoteWord(word.id);
+      setWord((current) =>
+        current
           ? {
-              ...w,
-              upvotes: res.upvotes ?? prev + 1,
-              user_has_upvoted: !!res.user_has_upvoted,
+              ...current,
+              upvotes: res?.upvotes ?? prevUpvotes + 1,
+              user_has_upvoted: !!res?.user_has_upvoted,
             }
-          : w
+          : current
       );
     } catch (e) {
-      console.error("upvote failed", e);
-      // revert optimistic update on failure
-      setWord((w) =>
-        w
+      console.error('Upvote failed:', e);
+      // Revert optimistic update on failure
+      setWord((current) =>
+        current
           ? {
-              ...w,
-              upvotes: Math.max(0, (w.upvotes || 1) - 1),
+              ...current,
+              upvotes: Math.max(0, (current.upvotes || 1) - 1),
               user_has_upvoted: false,
             }
-          : w
+          : current
       );
     }
   };
 
+  /*
+    trendLabel
+    Keeps the trending rule simple and defensive.
+  */
+  const trendLabel = useMemo(() => {
+    if (!word) return null;
+    if (typeof word.trend_score === 'number' && word.trend_score >= TRENDING_THRESHOLD) {
+      return <span className="status-pill status-pill--trending">Trending</span>;
+    }
+    return null;
+  }, [word]);
+
   if (loading) {
-    return <p style={{ color: "white", textAlign: "center" }}>Loading...</p>;
+    return (
+      <GalaxyShell>
+        <div className="centered">
+          <div className="app-card">
+            <h2>Loading...</h2>
+          </div>
+        </div>
+      </GalaxyShell>
+    );
   }
 
-  if (!word) {
-    return <p style={{ color: "white", textAlign: "center" }}>Word not found.</p>;
+  if (error || !word) {
+    return (
+      <GalaxyShell>
+        <div className="centered">
+          <div className="app-card">
+            <h2>Word</h2>
+            <p className="error-text">{error || 'Word not found.'}</p>
+            <button className="app-button" type="button" onClick={() => navigate('/')}>
+              Back to Home
+            </button>
+          </div>
+        </div>
+      </GalaxyShell>
+    );
   }
 
   return (
-    <div className="fiery-bg">
-      <div className="glass-card">
-        {/* Header */}
-        <header className="word-header">
-          <div>
-            <h1>{word.word}</h1>
-            {typeof word.trend_score === "number" && word.trend_score >= 70 && (
-              <small className="pos">🔥 Trending</small>
-            )}
+    <GalaxyShell>
+      <div className="page">
+        <div className="page-inner">
+          <div className="app-card app-card--wide">
+            <div className="page-header">
+              <div>
+                <h1 className="page-title">{word.word}</h1>
+                <div className="row-wrap" style={{ alignItems: 'center' }}>
+                  {trendLabel}
+                  {word.topRegion ? (
+                    <span className="status-pill">Top region: {word.topRegion}</span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="page-actions">
+                <button
+                  className="app-button"
+                  type="button"
+                  onClick={handleUpvote}
+                  disabled={!!word.user_has_upvoted}
+                  title={word.user_has_upvoted ? 'Already upvoted' : 'Upvote'}
+                >
+                  Upvote ({word.upvotes ?? 0})
+                </button>
+                <button
+                  className="app-button app-button--secondary"
+                  type="button"
+                  onClick={() => navigate('/')}
+                >
+                  Back
+                </button>
+              </div>
+            </div>
+
+            <div className="stack" style={{ marginTop: 16 }}>
+              <div className="item-card">
+                <strong>Definition</strong>
+                <p style={{ marginBottom: 0 }}>{word.definition || 'No definition provided.'}</p>
+              </div>
+
+              <div className="item-card">
+                <strong>Examples</strong>
+                <p style={{ marginBottom: 0 }}>{word.examples || 'No examples provided.'}</p>
+              </div>
+
+              <div className="item-card">
+                <strong>Similar words</strong>
+                {Array.isArray(similar) && similar.length ? (
+                  <div className="row-wrap" style={{ marginTop: 10 }}>
+                    {similar.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className="chip"
+                        title={typeof s.score === 'number' ? `similarity: ${s.score.toFixed(2)}` : 'Similar word'}
+                        onClick={() => navigate(`/word/${s.id}`)}
+                      >
+                        {s.word}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="muted" style={{ marginBottom: 0 }}>
+                    No similar words yet.
+                  </p>
+                )}
+              </div>
+
+              <div className="item-card">
+                <strong>Trend</strong>
+                {Array.isArray(word.trend) && word.trend.length > 0 ? (
+                  <div style={{ width: '100%', height: TREND_CHART_HEIGHT_PX, marginTop: 12 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={word.trend}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" tick={{ fill: 'white' }} />
+                        <YAxis tick={{ fill: 'white' }} />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="value" stroke="var(--color-accent)" strokeWidth={2} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <p className="muted" style={{ marginBottom: 0 }}>
+                    No trend data available.
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
-
-          <div className="actions">
-            <button
-              className="btn-glow"
-              onClick={handleUpvote}
-              disabled={!!word.user_has_upvoted}
-              title={word.user_has_upvoted ? "Already upvoted" : "Upvote"}
-            >
-              👍 {word.upvotes ?? 0}
-            </button>
-          </div>
-        </header>
-
-        {/* Similar words orbit */}
-        <section className="chart-container" style={{ marginTop: 16 }}>
-          {Array.isArray(similar) && similar.length > 0 ? (
-            <FloatingSimilar
-              centerWord={word.word}
-              items={similar}
-              onClick={(n) => navigate(`/word/${n.id}`)}
-            />
-          ) : (
-            <p className="no-trend" style={{ textAlign: "center", color: "white" }}>
-              No similar words yet.
-            </p>
-          )}
-        </section>
-
-        {/* Definition / examples */}
-        <section className="word-body">
-          <p>
-            <strong>Definition:</strong> {word.definition}
-          </p>
-          <p>
-            <strong>Examples:</strong> {word.examples}
-          </p>
-          {/* 🌍 Location (moved here) */}
-         <p className="meta" style={{ marginTop: 12 }}>
-          🌍 Most interest from: <strong>{word?.topRegion || "N/A"}</strong>
-        </p>
-        </section>
-
-        {/* Trend chart + location */}
-        <div className="chart-container">
-          {Array.isArray(word.trend) && word.trend.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={word.trend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fill: "white" }} />
-                <YAxis tick={{ fill: "white" }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="value" stroke="#FFD36E" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="no-trend" style={{ textAlign: "center", color: "white" }}>
-              No trend data available.
-            </p>
-          )}
-
-          {/* ✅ Always show location line so you can tell if it's missing */}
-          
         </div>
-
-        {/* Footer */}
-        <footer className="meta">
-          Last updated: {new Date().toLocaleDateString()}
-        </footer>
       </div>
-    </div>
+    </GalaxyShell>
   );
 }

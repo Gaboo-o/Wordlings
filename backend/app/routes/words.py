@@ -219,3 +219,15 @@ def upvote(word_id):
         db.session.rollback()
         db.session.refresh(word)
         return jsonify({"upvotes": word.upvotes, "user_has_upvoted": True}), 200
+
+@words_bp.route('/submissions', methods=['GET'])
+@login_required
+def submissions():
+    rows = (
+        Word.query
+        .filter(Word.submitted_by == current_user.id)
+        .order_by(Word.created_at.desc())
+        .all()
+    )
+
+    return jsonify([w.to_dict() for w in rows]), 200
