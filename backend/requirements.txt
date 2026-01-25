@@ -10,6 +10,7 @@ Flask-Login==0.6.3
 Flask-SQLAlchemy==3.1.1
 flask-talisman==1.1.0
 greenlet==3.2.4
+gunicorn==24.1.1
 idna==3.11
 itsdangerous==2.2.0
 Jinja2==3.1.6
@@ -25,6 +26,7 @@ ordered-set==4.1.0
 packaging==25.0
 pandas==2.3.3
 plotly==6.3.1
+psycopg2-binary==2.9.11
 Pygments==2.19.2
 python-dateutil==2.9.0.post0
 pytrends==4.9.2
