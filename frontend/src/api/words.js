@@ -71,18 +71,13 @@ export const upvoteWord = async (id) => {
   }
 };
 
-
-// NEW: robust similar-words fetcher (never throws; always returns an array)
-export const fetchSimilar = async ({ wordId, word, limit = 12 }) => {
+export const fetchSubmissions = async () => {
   try {
-    const params = {};
-    if (wordId) params.word_id = Number(wordId);
-    if (word) params.word = word;
-    params.limit = limit;
-    const res = await axios.get("/api/words/similar", { params });
+    const res = await axios.get("/api/words/submissions", { withCredentials: true });
     return Array.isArray(res.data) ? res.data : [];
   } catch (e) {
-    console.error("fetchSimilar failed:", e?.response?.status, e?.response?.data || e);
+    console.error("fetchSubmissions failed:", e?.response?.status, e?.response?.data || e);
     return [];
   }
 };
+

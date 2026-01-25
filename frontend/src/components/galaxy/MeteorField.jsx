@@ -67,6 +67,17 @@ function buildOrbiters(results) {
 }
 
 /*
+  computeFlySizePx
+  Maps an upvote count to a visual size in pixels.
+  Uses a logarithmic curve so large upvote counts do not explode the UI.
+*/
+function computeFlySizePx(upvotes) {
+  const v = Math.max(0, Number(upvotes) || 0);
+  const raw = GALAXY_CONFIG.FLY_SIZE_MIN_PX + Math.log2(v + 1) * GALAXY_CONFIG.FLY_SIZE_LOG_MULT;
+  return Math.min(GALAXY_CONFIG.FLY_SIZE_MAX_PX, Math.max(GALAXY_CONFIG.FLY_SIZE_MIN_PX, raw));
+}
+
+/*
   MeteorField
   Renders:
   - Always-on flying meteors (proven stable)
@@ -87,6 +98,18 @@ export default function MeteorField({ words = [], query = '' }) {
   const flyingPosRef = useRef(new Map()); // id -> { word, x, y, vx }
 
   const debouncedQuery = useDebouncedValue(query, GALAXY_CONFIG.SEARCH_DELAY_MS);
+
+  // Identify the top words by upvotes so we can render them with a distinct "ship" variant.
+  const shipWordIds = useMemo(() => {
+    const topN = Math.max(0, GALAXY_CONFIG.FLY_SHIP_TOP_N);
+    if (!topN || !words.length) return new Set();
+
+    const sorted = [...words].sort(
+      (a, b) => (Number(b?.upvotes) || 0) - (Number(a?.upvotes) || 0)
+    );
+
+    return new Set(sorted.slice(0, topN).map((w) => w.id));
+  }, [words]);
 
   const results = useMemo(
     () => computeSearchResults(words, debouncedQuery),
@@ -133,12 +156,19 @@ export default function MeteorField({ words = [], query = '' }) {
         ? GALAXY_CONFIG.FLY_SPEED_PX_PER_FRAME
         : -GALAXY_CONFIG.FLY_SPEED_PX_PER_FRAME;
 
+      const upvotes = Number(w?.upvotes) || 0;
+      const sizePx = computeFlySizePx(upvotes);
+      const variant = shipWordIds.has(w.id) ? 'ship' : 'meteor';
+
       setFlying((prev) => [
         ...prev,
         {
           id: crypto.randomUUID(),
           wordId: w.id,
           word: w.word,
+          upvotes,
+          sizePx,
+          variant,
           x,
           y,
           vx,
@@ -147,7 +177,7 @@ export default function MeteorField({ words = [], query = '' }) {
     }, GALAXY_CONFIG.FLY_SPAWN_INTERVAL_MS);
 
     return () => clearInterval(spawnInterval);
-  }, [words]);
+  }, [words, shipWordIds]);
 
   const removeFlying = (meteorId) => {
     setFlying((prev) => prev.filter((m) => m.id !== meteorId));

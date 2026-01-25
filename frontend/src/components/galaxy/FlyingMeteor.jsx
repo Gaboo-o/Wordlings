@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 /*
   FlyingMeteor
@@ -19,6 +19,19 @@ export default function FlyingMeteor({
 }) {
   const ref = useRef(null);
   const pos = useRef({ x: meteor.x, y: meteor.y });
+
+  // Direction is used only for styling (trail direction, ship orientation).
+  const dir = meteor.vx >= 0 ? 'right' : 'left';
+
+  const rootClassName = useMemo(() => {
+    const base = 'fly-item';
+    const dirClass = dir === 'right' ? 'fly-item--right' : 'fly-item--left';
+    return `${base} ${dirClass}`;
+  }, [dir]);
+
+  const objectClassName = meteor.variant === 'ship'
+    ? 'fly-object fly-object--ship'
+    : 'fly-object fly-object--meteor';
 
   useEffect(() => {
     let rafId;
@@ -50,15 +63,24 @@ export default function FlyingMeteor({
     return () => cancelAnimationFrame(rafId);
   }, [despawnMarginPx, meteor.vx, onDone, onPos, pausedRef]);
 
+  // Use a button for a reliable, clickable hitbox.
+  // Styling removes default button appearance.
   return (
-    <div
+    <button
+      type="button"
       ref={ref}
-      className="meteor"
-      style={{ position: 'absolute', left: meteor.x, top: meteor.y }}
+      className={rootClassName}
+      style={{
+        left: meteor.x,
+        top: meteor.y,
+        '--fly-size': `${Number(meteor.sizePx) || 24}px`,
+      }}
       onClick={() => onSelect?.(meteor)}
+      aria-label={meteor.word}
       title={`id=${meteor.wordId}`}
     >
-      {meteor.word}
-    </div>
+      <span className={objectClassName} aria-hidden="true" />
+      <span className="fly-label">{meteor.word}</span>
+    </button>
   );
 }
