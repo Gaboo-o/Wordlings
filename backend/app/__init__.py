@@ -74,7 +74,13 @@ def create_app():
     # CORS
     cors_origins = os.environ.get("CORS_ORIGINS", "http://localhost:5173")
     cors_origins = [o.strip() for o in cors_origins.split(",") if o.strip()]
-    CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": cors_origins}})
+
+    CORS(
+        app,
+        supports_credentials=True,
+        origins=cors_origins,
+        allow_headers=["Content-Type", "X-CSRF-Token", "X-XSRF-TOKEN"],
+    )
 
     # DB
     db.init_app(app)
