@@ -52,9 +52,9 @@
 
 
   /* Layering */
-  --z-meteor: 50;
-  --z-orbit: 60;
-  --z-ui: 100;
+  --z-meteor: 60;
+  --z-orbit: 100;
+  --z-ui: 50;
 }
 
 html,
