@@ -3,12 +3,44 @@ import axios from "axios";
 export const fetchTrends = async (word) => {
   try {
     const res = await axios.get(`/api/trends/${encodeURIComponent(word)}`);
-    return res.data;
+    const data = res.data || {};
+
+    const raw = Array.isArray(data.trend) ? data.trend : [];
+
+    // Normalize into {date, value} for Recharts no matter what backend sends
+    const trend = raw
+      .map((pt) => {
+        const date =
+          pt.date ||
+          pt.time ||
+          pt.formattedTime ||
+          pt.formatted_time ||
+          pt.week ||
+          null;
+
+        const value =
+          pt.value ??
+          pt.interest ??
+          pt.score ??
+          pt.count ??
+          null;
+
+        if (!date || value === null || value === undefined) return null;
+
+        return { date: String(date), value: Number(value) };
+      })
+      .filter(Boolean);
+
+    return {
+      trend,
+      topRegion: data.topRegion ?? data.top_region ?? null,
+    };
   } catch (e) {
     console.error("fetchTrends failed:", e?.response?.status, e?.response?.data || e);
     return { trend: [], topRegion: null };
   }
 };
+
 
 export const fetchWords = async (params = {}) => {
   try {
@@ -81,3 +113,14 @@ export const fetchSubmissions = async () => {
   }
 };
 
+export const fetchSimilar = async ({ wordId, limit = 12 }) => {
+  try {
+    const res = await axios.get("/api/words/similar", {
+      params: { word_id: wordId, limit },
+    });
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (e) {
+    console.error("fetchSimilar failed:", e?.response?.status, e?.response?.data || e);
+    return [];
+  }
+};

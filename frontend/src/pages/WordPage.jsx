@@ -63,22 +63,18 @@ export default function WordPage() {
         if (!mounted) return;
         setWord(wordData || null);
 
-        // 2) Fetch trend metadata if available
-        if (wordData?.word && wordsApi.fetchTrends) {
-          try {
-            const t = await wordsApi.fetchTrends(wordData.word);
-            if (mounted) {
-              setWord((current) => ({
-                ...(current || wordData),
-                trend: t?.trend || [],
-                topRegion: t?.topRegion || null,
-              }));
-            }
-          } catch (e) {
-            // Trend data is optional; do not fail the entire page.
-            console.warn('Trend fetch failed:', e);
+        // 2) Fetch trend metadata (optional)
+        if (wordData?.word) {
+          const t = await wordsApi.fetchTrends(wordData.word);
+          if (mounted) {
+            setWord((current) => ({
+              ...(current || wordData),
+              trend: t?.trend || [],
+              topRegion: t?.topRegion || null,
+            }));
           }
         }
+
 
         // 3) Fetch similar words
         if (wordsApi.fetchSimilar) {
