@@ -504,6 +504,63 @@ body {
   transform: translateY(-50%);
 }
 
+.fly-item {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  gap: 6px; /* space between object and label */
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Visual stack sized by CSS variable */
+.fly-visual {
+  position: relative;
+  width: var(--fly-size);
+  height: var(--fly-size);
+}
+
+/* Both SVG layers fill the box */
+.fly-fire,
+.fly-body {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Static fire styling (ready to animate later) */
+.fly-fire {
+  opacity: 0.75;
+  filter: drop-shadow(0 0 10px rgba(255, 140, 0, 0.55));
+}
+
+/* Body styling */
+.fly-body {
+  color: rgba(255, 255, 255, 0.92);
+  filter: drop-shadow(0 0 10px rgba(120, 190, 255, 0.25));
+}
+
+/* Put fire behind the body */
+.fly-fire { z-index: 0; }
+.fly-body { z-index: 1; }
+
+/* Direction: fire goes on the trailing side */
+.fly-item--right .fly-fire { transform: translateX(-22%); }
+.fly-item--left  .fly-fire { transform: translateX(22%) scaleX(-1); }
+.fly-item--left  .fly-body { transform: scaleX(-1); }
+
+/* Word label under the object */
+.fly-label {
+  font-size: 12px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 0 10px rgba(120, 190, 255, 0.18);
+  user-select: none;
+}
+
 .error-text {
   color: var(--color-danger);
   margin-bottom: var(--space-2);

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { GALAXY_CONFIG } from '../../config/galaxyConfig';
+import CurvedLabel from '../layout/CurvedLabel';
 
 /*
   clamp
@@ -199,7 +200,6 @@ export default function OrbitActionMenu({ items = [] }) {
             className="orbit-menu__stack-item"
             style={{
               '--stack-y': `-${(i + 1) * GALAXY_CONFIG.ORBIT_MENU_STACK_GAP_PX}px`,
-              '--label-rotate': `${computeLabelRotateDeg(it._orbit?.phaseDeg)}deg`,
             }}
           >
             <button
@@ -214,7 +214,16 @@ export default function OrbitActionMenu({ items = [] }) {
               </span>
             </button>
 
-            <span className="orbit-menu__label">{it.label}</span>
+            <div className="orbit-menu__label-wrapper" aria-hidden={!open}>
+              <CurvedLabel
+                text={it.label}
+                radius={40}           // distance of arc from moon center
+                arcDeg={1}           // how curved the text is
+                clockwise={false}     // depends on visual orientation you want
+                fontSize={18}
+                idSuffix={it.key}
+              />
+            </div>
           </div>
         ))}
       </div>

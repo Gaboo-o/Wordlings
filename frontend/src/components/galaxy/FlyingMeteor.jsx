@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
+import MeteorBody from '../../icons/MeteorBody';
 
 /*
   FlyingMeteor
@@ -63,6 +64,8 @@ export default function FlyingMeteor({
     return () => cancelAnimationFrame(rafId);
   }, [despawnMarginPx, meteor.vx, onDone, onPos, pausedRef]);
 
+  const Body = meteor.variant === "ship" ? MeteorBody : MeteorBody; //add ship body later
+
   // Use a button for a reliable, clickable hitbox.
   // Styling removes default button appearance.
   return (
@@ -79,7 +82,10 @@ export default function FlyingMeteor({
       aria-label={meteor.word}
       title={`id=${meteor.wordId}`}
     >
-      <span className={objectClassName} aria-hidden="true" />
+      <span className="fly-visual" aria-hidden="true">
+        <Body className="fly-body" />
+      </span>
+
       <span className="fly-label">{meteor.word}</span>
     </button>
   );
