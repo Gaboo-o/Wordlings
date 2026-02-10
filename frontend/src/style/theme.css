@@ -617,15 +617,12 @@ body {
   border: 0;
 }
 
-
-
 /* Home page */
 .home-page {
   position: relative;
 }
 
 .home-hero {
-  min-height: 100vh;
   display: grid;
   place-items: center;
   text-align: center;
