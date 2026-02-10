@@ -39,12 +39,13 @@ export default function OrbitMeteor({ orbiter, onSelect }) {
   return (
     <div
       ref={ref}
-      className="meteor orbit"
-      style={{ position: 'absolute' }}
+      className="orbit-star"
+      style={{ position: "absolute" }}
       onClick={() => onSelect?.(orbiter)}
       title={`id=${orbiter.wordId} score=${Number(orbiter.score).toFixed(2)}`}
-    >
-      {orbiter.word}
-    </div>
+  >
+    <span className="orbit-star__dot" aria-hidden="true" />
+    <span className="orbit-star__label">{orbiter.word}</span>
+  </div>
   );
 }
