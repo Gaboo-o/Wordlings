@@ -78,7 +78,13 @@ export default function FlyingMeteor({
         top: meteor.y,
         '--fly-size': `${Number(meteor.sizePx) || 24}px`,
       }}
-      onClick={() => onSelect?.(meteor)}
+      
+      // inside the return button:
+      onClick={() => {
+      console.log('flying meteor clicked:', meteor.id, meteor.word);
+      onSelect?.(meteor);
+}}
+
       aria-label={meteor.word}
       title={`id=${meteor.wordId}`}
     >

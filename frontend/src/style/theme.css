@@ -387,7 +387,7 @@ body {
   cursor: pointer;
   pointer-events: auto;
   user-select: none;
-  z-index: var(--z-meteor);
+  z-index: 30;
 }
 
 .fly-item:focus-visible {
@@ -1011,4 +1011,22 @@ body {
 
 .orbit-star__dot {
   animation: orbit-star-twinkle 2.8s ease-in-out infinite;
+}
+
+/* Let meteors be clickable through the UI layer */
+.galaxy-ui {
+  pointer-events: none;
+}
+
+/* But keep real UI controls clickable */
+.galaxy-ui input,
+.galaxy-ui button,
+.galaxy-ui a,
+.galaxy-ui .link-button,
+.galaxy-ui .orbit-menu,
+.galaxy-ui .orbit-menu * {
+  pointer-events: auto;
+}
+.fly-item {
+  pointer-events: auto !important;
 }
