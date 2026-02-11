@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { GALAXY_CONFIG } from '../../config/galaxyConfig';
+import OrbitStarIcon from '../../icons/OrbitStarIcon';
+
 
 /*
   OrbitMeteor
@@ -37,15 +39,13 @@ export default function OrbitMeteor({ orbiter, onSelect }) {
   }, [orbiter.angle, orbiter.radius]);
 
   return (
-    <div
-      ref={ref}
-      className="orbit-star"
-      style={{ position: "absolute" }}
-      onClick={() => onSelect?.(orbiter)}
-      title={`id=${orbiter.wordId} score=${Number(orbiter.score).toFixed(2)}`}
+  <div
+    ref={ref}
+    className="orbit-star"
+    onClick={() => onSelect?.(orbiter)}
   >
-    <span className="orbit-star__dot" aria-hidden="true" />
+    <OrbitStarIcon size={38} />
     <span className="orbit-star__label">{orbiter.word}</span>
   </div>
-  );
+);
 }
