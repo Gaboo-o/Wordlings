@@ -1,4 +1,5 @@
 import TopLeftBrand from './TopLeftBrand';
+import Starfield from '../galaxy/Starfield';
 
 /*
   GalaxyShell
@@ -19,6 +20,7 @@ export default function GalaxyShell({
 
   return (
     <div className={`galaxy-shell ${variantClass}`.trim()}>
+      <Starfield count={220} />
       {showBrand && <TopLeftBrand text={brandText} to={brandTo} />}
       <div className="galaxy-content">{children}</div>
     </div>
