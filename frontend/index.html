@@ -5,6 +5,18 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Wordlings</title>
+
+    <!-- Prevent a flash of the default theme when a user has a saved preference. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('wordlings.theme');
+          if (t) document.documentElement.dataset.theme = t;
+        } catch (e) {
+          // ignore
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

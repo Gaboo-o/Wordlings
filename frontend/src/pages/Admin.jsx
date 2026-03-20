@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import * as adminApi from '../api/admin';
-import { useAuth } from '../context/AuthContext';
+import { getErrorMessage } from '../api/errors';
 import GalaxyShell from '../components/layout/GalaxyShell';
 
 /*
@@ -12,38 +12,38 @@ import GalaxyShell from '../components/layout/GalaxyShell';
 */
 export default function Admin() {
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const isLoggedIn = !!user;
-  const isAdmin = !!user?.is_admin;
-
   /*
     load
     Fetches pending submissions from the admin API.
   */
-  const load = async () => {
+  const load = async (signal) => {
     setLoading(true);
     setError('');
     try {
-      const data = await adminApi.getPending();
-      setPending(data || []);
+      const data = await adminApi.getPending({ signal });
+      // Defensive: tolerate either an array response, or a wrapped { data: [] } shape.
+      const next = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+      setPending(next);
     } catch (e) {
+      if (e?.code === 'CANCELED') return;
       console.error('Failed to load pending submissions:', e);
       setPending([]);
-      setError(e?.response?.data?.error || e?.message || 'Failed to load pending submissions');
+      setError(getErrorMessage(e, 'Failed to load pending submissions'));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!isAdmin) return;
-    load();
-  }, [isAdmin]);
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, []);
 
   /*
     approve
@@ -55,7 +55,7 @@ export default function Admin() {
       load();
     } catch (e) {
       console.error('Approve failed:', e);
-      setError(e?.response?.data?.error || e?.message || 'Approve failed');
+      setError(getErrorMessage(e, 'Approve failed'));
     }
   };
 
@@ -69,46 +69,9 @@ export default function Admin() {
       load();
     } catch (e) {
       console.error('Reject failed:', e);
-      setError(e?.response?.data?.error || e?.message || 'Reject failed');
+      setError(getErrorMessage(e, 'Reject failed'));
     }
   };
-
-  if (!isLoggedIn) {
-    return (
-      <GalaxyShell variant="auth">
-        <div className="centered">
-          <div className="app-card">
-            <h2>Admin Dashboard</h2>
-            <p className="muted">You must be logged in to access admin tools.</p>
-            <div className="row-wrap">
-              <button className="app-button" type="button" onClick={() => navigate('/login')}>
-                Go to Login
-              </button>
-              <button className="app-button app-button--secondary" type="button" onClick={() => navigate('/')}>
-                Back to Home
-              </button>
-            </div>
-          </div>
-        </div>
-      </GalaxyShell>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <GalaxyShell>
-        <div className="centered">
-          <div className="app-card">
-            <h2>Admin Dashboard</h2>
-            <p className="muted">You do not have permission to view this page.</p>
-            <button className="app-button" type="button" onClick={() => navigate('/')}>
-              Back to Home
-            </button>
-          </div>
-        </div>
-      </GalaxyShell>
-    );
-  }
 
   return (
     <GalaxyShell>
@@ -125,7 +88,7 @@ export default function Admin() {
                 <button className="app-button app-button--secondary" type="button" onClick={() => navigate('/')}>
                   Back to Home
                 </button>
-                <button className="app-button" type="button" onClick={load} disabled={loading}>
+                <button className="app-button" type="button" onClick={() => load()} disabled={loading}>
                   Refresh
                 </button>
               </div>
@@ -140,7 +103,7 @@ export default function Admin() {
             ) : null}
 
             <div className="stack">
-              {pending.map((w) => (
+              {(Array.isArray(pending) ? pending : []).map((w) => (
                 <div key={w.id} className="item-card">
                   <strong>{w.word}</strong>
                   {w.definition ? <p>{w.definition}</p> : null}

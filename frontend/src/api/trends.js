@@ -1,48 +1,38 @@
-// backend/routes/trends.js
-/*import express from "express";
-import googleTrends from "google-trends-api";
+import { get } from './client';
 
+/**
+ * Fetch Google Trends-like data for a word.
+ *
+ * Response shapes seen historically:
+ * - { trend: [{date,value}, ...], topRegion }
+ * - backend wrappers: { success: true, data: { ... } }
+ */
+export async function fetchTrends(word, { signal } = {}) {
+  const data = await get(`/api/trends/${encodeURIComponent(word)}`, { signal });
 
-const router = express.Router();
+  const raw = Array.isArray(data?.trend) ? data.trend : [];
 
-// GET /api/trends/:word
-router.get("/:word", async (req, res) => {
-  try {
-    const { word } = req.params;
+  // Normalize into {date, value} for Recharts no matter what backend sends.
+  const trend = raw
+    .map((pt) => {
+      const date =
+        pt.date ||
+        pt.time ||
+        pt.formattedTime ||
+        pt.formatted_time ||
+        pt.week ||
+        null;
 
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setFullYear(endDate.getFullYear() - 5); // last 5 years
+      const value = pt.value ?? pt.interest ?? pt.score ?? pt.count ?? null;
 
-    // Fetch trends over time
-    const trendData = await googleTrends.interestOverTime({
-      keyword: word,
-      startTime: startDate,
-      endTime: endDate,
-      geo: "", // worldwide; set to "US" or another code if you want
-    });
+      if (!date || value === null || value === undefined) return null;
 
-    const parsedTrend = JSON.parse(trendData).default.timelineData.map((item) => ({
-      date: item.formattedTime,
-      value: item.value[0],
-    }));
+      return { date: String(date), value: Number(value) };
+    })
+    .filter(Boolean);
 
-    // Fetch region popularity
-    const regionData = await googleTrends.interestByRegion({
-      keyword: word,
-      startTime: startDate,
-      endTime: endDate,
-    });
-
-    const parsedRegions = JSON.parse(regionData).default.geoMapData;
-    const topRegion = parsedRegions[0]?.geoName || "Unknown";
-
-    res.json({ trend: parsedTrend, topRegion });
-  } catch (err) {
-    console.error("Google Trends error:", err);
-    res.status(500).json({ error: "Failed to fetch Google Trends data" });
-  }
-});
-
-export default router;
-*/
+  return {
+    trend,
+    topRegion: data?.topRegion ?? data?.top_region ?? null,
+  };
+}

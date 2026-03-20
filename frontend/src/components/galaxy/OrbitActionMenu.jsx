@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { GALAXY_CONFIG } from '../../config/galaxyConfig';
 import CurvedLabel from '../layout/CurvedLabel';
+import MeteorSprite from '../ui/MeteorSprite';
 
 /*
   clamp
@@ -183,6 +184,8 @@ export default function OrbitActionMenu({ items = [] }) {
                 aria-label={it.label}
                 title={it.label}
               >
+                <span className="orbit-menu__moon-meteor fly-object fly-object--meteor" aria-hidden="true" />
+
                 <span className="orbit-menu__moon-icon" aria-hidden="true">
                   {it.icon}
                 </span>

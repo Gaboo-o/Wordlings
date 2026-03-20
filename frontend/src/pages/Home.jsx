@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { fetchWords, searchWords, upvoteWord } from '../api/words';
+import { fetchWords, searchWords } from '../api/words';
+import { getErrorMessage } from '../api/errors';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 import GalaxyShell from '../components/layout/GalaxyShell';
 import MeteorField from '../components/galaxy/MeteorField';
@@ -29,9 +31,11 @@ export default function Home() {
   const [words, setWords] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { themeId, cycleTheme } = useTheme();
 
   const isLoggedIn = !!user;
   const isAdmin = !!user?.is_admin;
@@ -43,57 +47,29 @@ export default function Home() {
     loadWords
     Loads either a full list of words or a search result set.
   */
-  const loadWords = async () => {
+  const loadWords = useCallback(async (signal) => {
     setLoading(true);
+    setError('');
 
     try {
       const q = debouncedSearch.trim();
-      const data = q ? await searchWords(q) : await fetchWords();
+      const data = q ? await searchWords(q, { signal }) : await fetchWords({}, { signal });
       setWords(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Failed to load words:', error);
+    } catch (err) {
+      if (err?.code === 'CANCELED') return;
+      console.error('Failed to load words:', err);
       setWords([]);
+      setError(getErrorMessage(err, 'Failed to load words'));
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadWords();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]);
 
-  /*
-    handleUpvote
-    Upvotes a word and updates local state if the user is logged in.
-  */
-  const handleUpvote = async (id) => {
-    if (!isLoggedIn) {
-      navigate('/login');
-      return;
-    }
-
-    try {
-      const already = words.find((w) => w.id === id)?.user_has_upvoted;
-      if (already) return;
-
-      const res = await upvoteWord(id);
-
-      setWords((ws) =>
-        ws.map((w) =>
-          w.id === id
-            ? {
-                ...w,
-                upvotes: res.upvotes ?? w.upvotes,
-                user_has_upvoted: !!res.user_has_upvoted,
-              }
-            : w
-        )
-      );
-    } catch (e) {
-      console.error('Upvote failed:', e);
-    }
-  };
+  useEffect(() => {
+    const controller = new AbortController();
+    loadWords(controller.signal);
+    return () => controller.abort();
+  }, [debouncedSearch, loadWords]);
 
   /*
     handleLogout
@@ -107,6 +83,20 @@ export default function Home() {
       console.error('Logout failed:', e);
     }
   };
+
+  const emptyState = useMemo(() => {
+    if (loading) return null;
+    if (error) return null;
+
+    const q = searchTerm.trim();
+    if (!words.length && q) {
+      return <p className="muted home-loading">No matches for “{q}”.</p>;
+    }
+    if (!words.length) {
+      return <p className="muted home-loading">No words yet. Add one!</p>;
+    }
+    return null;
+  }, [loading, error, words.length, searchTerm]);
 
   /*
     menuItems
@@ -145,6 +135,15 @@ export default function Home() {
       show: isLoggedIn,
       onClick: handleLogout,
     },
+    {
+      key: 'theme',
+      label: `Theme: ${themeId}`,
+      icon: <span aria-hidden="true" style={{ fontWeight: 900, fontSize: iconSize }}>
+        🎃
+      </span>,
+      show: true,
+      onClick: () => cycleTheme(),
+    },
   ];
 
   return (
@@ -164,10 +163,13 @@ export default function Home() {
                   placeholder={GALAXY_CONFIG.HOME_SEARCH_PLACEHOLDER}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  aria-label="Search words"
                 />
               </form>
 
-              {loading ? <p className="muted home-loading">Loading...</p> : null}
+              {loading ? <p className="muted home-loading">Loading…</p> : null}
+              {error ? <p className="error-text home-loading">{error}</p> : null}
+              {emptyState}
             </div>
           </section>
         </div>

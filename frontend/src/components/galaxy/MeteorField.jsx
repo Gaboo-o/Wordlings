@@ -1,19 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import useDebouncedValue from '../../hooks/useDebouncedValue';
-import { GALAXY_CONFIG, TWO_PI } from '../../config/galaxyConfig';
-import DebugOverlay from '../debug/DebugOverlay';
-import FlyingMeteor from './FlyingMeteor';
-import OrbitMeteor from './OrbitMeteor';
+// frontend/src/components/galaxy/MeteorField.jsx
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import useDebouncedValue from "../../hooks/useDebouncedValue";
+import { GALAXY_CONFIG, TWO_PI } from "../../config/galaxyConfig";
+import DebugOverlay from "../debug/DebugOverlay";
+import FlyingMeteor from "./FlyingMeteor";
+import OrbitMeteor from "./OrbitMeteor";
 
-/*
-  matchStrength
-  Computes a simple relevance score for a word given a query.
-  The scoring values are configured in GALAXY_CONFIG.
-*/
+/** Accept various id keys defensively */
+function getWordId(w) {
+  const v = w?.id ?? w?.word_id ?? w?.wordId;
+  // allow numeric strings too
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v);
+  return null;
+}
+
+function getWordText(w) {
+  const v = w?.word ?? w?.text ?? w?.name;
+  return typeof v === "string" ? v : "";
+}
+
 function matchStrength(word, query) {
-  const w = (word || '').toLowerCase();
-  const q = (query || '').toLowerCase();
+  const w = (word || "").toLowerCase();
+  const q = (query || "").toLowerCase();
 
   if (!q) return 0;
   if (w === q) return GALAXY_CONFIG.MATCH_SCORE_EXACT;
@@ -22,27 +32,22 @@ function matchStrength(word, query) {
   return 0;
 }
 
-/*
-  computeSearchResults
-  Returns a capped, sorted list of matches for the debounced query.
-*/
 function computeSearchResults(words, debouncedQuery) {
   if (!debouncedQuery || debouncedQuery.length < GALAXY_CONFIG.SEARCH_MIN_QUERY_LEN) {
     return [];
   }
 
   return words
-    .map((w) => ({ id: w.id, word: w.word, s: matchStrength(w.word, debouncedQuery) }))
-    .filter((x) => x.s > 0)
+    .map((w) => {
+      const id = getWordId(w);
+      const word = getWordText(w);
+      return { id, word, s: matchStrength(word, debouncedQuery) };
+    })
+    .filter((x) => x.s > 0 && x.word)
     .sort((a, b) => b.s - a.s)
     .slice(0, GALAXY_CONFIG.SEARCH_MAX_RESULTS);
 }
 
-/*
-  buildOrbiters
-  Converts search results into orbiting labels.
-  Closest matches orbit closer to the center.
-*/
 function buildOrbiters(results) {
   const n = results.length;
   if (!n) return [];
@@ -56,8 +61,8 @@ function buildOrbiters(results) {
     const angle = (i / Math.max(1, n)) * TWO_PI;
 
     return {
-      id: it.id,
-      wordId: it.id,
+      id: it.id ?? `${it.word}-${i}`, // stable key even if id missing
+      wordId: it.id ?? null,
       word: it.word,
       score: it.s,
       radius,
@@ -66,40 +71,21 @@ function buildOrbiters(results) {
   });
 }
 
-/*
-  computeFlySizePx
-  Maps an upvote count to a visual size in pixels.
-  Uses a logarithmic curve so large upvote counts do not explode the UI.
-*/
 function computeFlySizePx(upvotes) {
   const v = Math.max(0, Number(upvotes) || 0);
   const raw = GALAXY_CONFIG.FLY_SIZE_MIN_PX + Math.log2(v + 1) * GALAXY_CONFIG.FLY_SIZE_LOG_MULT;
   return Math.min(GALAXY_CONFIG.FLY_SIZE_MAX_PX, Math.max(GALAXY_CONFIG.FLY_SIZE_MIN_PX, raw));
 }
 
-/*
-  MeteorField
-  Renders:
-  - Always-on flying meteors (proven stable)
-  - Orbiting search matches (proven stable)
-  - Optional debug overlay (centralized and globally toggleable)
-
-  Intentionally excluded for simplicity (for now):
-  - Orbit release / fly-off transitions
-  - Stopping spawns during search
-*/
-export default function MeteorField({ words = [], query = '' }) {
+export default function MeteorField({ words = [], query = "" }) {
   const navigate = useNavigate();
 
   const [flying, setFlying] = useState([]);
   const pausedRef = useRef(false);
 
-  // Used only for debugging. Stores a few live positions without causing re-renders.
   const flyingPosRef = useRef(new Map()); // id -> { word, x, y, vx }
-
   const debouncedQuery = useDebouncedValue(query, GALAXY_CONFIG.SEARCH_DELAY_MS);
 
-  // Identify the top words by upvotes so we can render them with a distinct "ship" variant.
   const shipWordIds = useMemo(() => {
     const topN = Math.max(0, GALAXY_CONFIG.FLY_SHIP_TOP_N);
     if (!topN || !words.length) return new Set();
@@ -108,32 +94,31 @@ export default function MeteorField({ words = [], query = '' }) {
       (a, b) => (Number(b?.upvotes) || 0) - (Number(a?.upvotes) || 0)
     );
 
-    return new Set(sorted.slice(0, topN).map((w) => w.id));
+    return new Set(
+      sorted
+        .map((w) => getWordId(w))
+        .filter((id) => typeof id === "number" && Number.isFinite(id))
+        .slice(0, topN)
+    );
   }, [words]);
 
-  const results = useMemo(
-    () => computeSearchResults(words, debouncedQuery),
-    [words, debouncedQuery]
-  );
-
+  const results = useMemo(() => computeSearchResults(words, debouncedQuery), [words, debouncedQuery]);
   const orbiters = useMemo(() => buildOrbiters(results), [results]);
 
   const mode =
     query && query.length >= GALAXY_CONFIG.SEARCH_MIN_QUERY_LEN
       ? debouncedQuery === query
-        ? 'SEARCH_ACTIVE'
-        : 'SEARCH_PENDING'
-      : 'FLYING';
+        ? "SEARCH_ACTIVE"
+        : "SEARCH_PENDING"
+      : "FLYING";
 
   useEffect(() => {
-    // Crucial: browsers pause requestAnimationFrame in background tabs.
-    // Without pausing spawning too, meteors accumulate and appear to jump on return.
     const onVis = () => {
       pausedRef.current = document.hidden;
     };
 
-    document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
 
   useEffect(() => {
@@ -144,28 +129,28 @@ export default function MeteorField({ words = [], query = '' }) {
       const fromLeft = Math.random() > 0.5;
       const w = words[Math.floor(Math.random() * words.length)];
 
+      const wordId = getWordId(w);
+      const wordText = getWordText(w);
+      if (!wordText) return;
+
       const x = fromLeft
         ? -GALAXY_CONFIG.FLY_SPAWN_X_MARGIN_PX
         : window.innerWidth + GALAXY_CONFIG.FLY_SPAWN_X_MARGIN_PX;
 
-      const y =
-        Math.random() *
-        (window.innerHeight * GALAXY_CONFIG.FLY_SPAWN_Y_MAX_RATIO);
+      const y = Math.random() * (window.innerHeight * GALAXY_CONFIG.FLY_SPAWN_Y_MAX_RATIO);
 
-      const vx = fromLeft
-        ? GALAXY_CONFIG.FLY_SPEED_PX_PER_FRAME
-        : -GALAXY_CONFIG.FLY_SPEED_PX_PER_FRAME;
+      const vx = fromLeft ? GALAXY_CONFIG.FLY_SPEED_PX_PER_FRAME : -GALAXY_CONFIG.FLY_SPEED_PX_PER_FRAME;
 
       const upvotes = Number(w?.upvotes) || 0;
       const sizePx = computeFlySizePx(upvotes);
-      const variant = shipWordIds.has(w.id) ? 'ship' : 'meteor';
+      const variant = wordId != null && shipWordIds.has(wordId) ? "ship" : "meteor";
 
       setFlying((prev) => [
         ...prev,
         {
           id: crypto.randomUUID(),
-          wordId: w.id,
-          word: w.word,
+          wordId: wordId, // may be null
+          word: wordText,
           upvotes,
           sizePx,
           variant,
@@ -185,8 +170,16 @@ export default function MeteorField({ words = [], query = '' }) {
   };
 
   const onSelectWord = (item) => {
-    if (!item?.wordId) return;
-    navigate(`/word/${item.wordId}`);
+    const id = item?.wordId ?? item?.id;
+    const word = item?.word;
+
+    if (id != null && id !== undefined && id !== "") {
+      navigate(`/word/${id}`);
+      return;
+    }
+    if (word) {
+      navigate(`/word/${encodeURIComponent(word)}`);
+    }
   };
 
   const sampleFlying = useMemo(() => {
@@ -201,14 +194,7 @@ export default function MeteorField({ words = [], query = '' }) {
   }, [flying.length, mode]);
 
   const debugData = GALAXY_CONFIG.DEBUG_ENABLED
-    ? {
-        mode,
-        query,
-        debouncedQuery,
-        flyingCount: flying.length,
-        results,
-        sampleFlying,
-      }
+    ? { mode, query, debouncedQuery, flyingCount: flying.length, results, sampleFlying }
     : null;
 
   return (
@@ -224,12 +210,7 @@ export default function MeteorField({ words = [], query = '' }) {
           onDone={() => removeFlying(m.id)}
           onPos={(pos) => {
             if (!GALAXY_CONFIG.DEBUG_ENABLED) return;
-            flyingPosRef.current.set(m.id, {
-              word: m.word,
-              x: pos.x,
-              y: pos.y,
-              vx: m.vx,
-            });
+            flyingPosRef.current.set(m.id, { word: m.word, x: pos.x, y: pos.y, vx: m.vx });
           }}
           onSelect={onSelectWord}
         />

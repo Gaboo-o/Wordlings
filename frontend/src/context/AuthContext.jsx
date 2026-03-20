@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import axios from 'axios';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+
 import * as authApi from '../api/auth';
+import { setUnauthorizedHandler } from '../api/client';
 
 const AuthContext = createContext();
 
@@ -12,49 +13,92 @@ export function AuthProvider({ children }) {
       return null;
     }
   });
+  const [initializing, setInitializing] = useState(true);
 
-  useEffect(() => {
-    // Check current login status on mount
-    (async () => {
-      try {
-        const res = await axios.get('/api/auth/status', { withCredentials: true });
-        if (res.data.logged_in)
-          setUser({ id: res.data.user_id, username: res.data.username, is_admin: res.data.is_admin });
-        else
-          setUser(null);
-      } catch {
-        setUser(null);
-      }
-    })();
+  const persistUser = useCallback((u) => {
+    if (u) localStorage.setItem('user', JSON.stringify(u));
+    else localStorage.removeItem('user');
   }, []);
 
-  const login = async (username, password) => {
-    const data = await authApi.login(username, password);
-    const userObj = { id: data.user_id, username: data.username, is_admin: data.is_admin || false };
-    localStorage.setItem('user', JSON.stringify(userObj));
-    setUser(userObj);
-    return data;
-  };
-
-  const signup = async (username, password) => {
-    const data = await authApi.signup(username, password);
-    const userObj = { id: data.user_id, username: data.username, is_admin: data.is_admin || false };
-    localStorage.setItem('user', JSON.stringify(userObj));
-    setUser(userObj);
-    return data;
-  };
-
-  const logout = async () => {
-    await authApi.logout();
-    localStorage.removeItem('user');
+  const refresh = useCallback(async ({ signal } = {}) => {
+    const res = await authApi.status({ signal });
+    if (res?.logged_in) {
+      const u = {
+        id: res.user_id,
+        username: res.username,
+        is_admin: !!res.is_admin,
+      };
+      setUser(u);
+      persistUser(u);
+      return u;
+    }
     setUser(null);
-  };
+    persistUser(null);
+    return null;
+  }, [persistUser]);
 
-  return (
-    <AuthContext.Provider value={{ user, login, signup, logout }}>
-      {children}
-    </AuthContext.Provider>
+  useEffect(() => {
+    // Keep UI in sync if the server invalidates the session.
+    setUnauthorizedHandler(() => {
+      setUser(null);
+      persistUser(null);
+    });
+  }, [persistUser]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        await refresh({ signal: controller.signal });
+      } catch {
+        // If we cannot verify status, fail closed (treat as logged out).
+        setUser(null);
+        persistUser(null);
+      } finally {
+        setInitializing(false);
+      }
+    })();
+
+    return () => controller.abort();
+  }, [refresh]);
+
+  const login = useCallback(async (username, password) => {
+    const data = await authApi.login(username, password);
+    const u = {
+      id: data.user_id,
+      username: data.username,
+      is_admin: !!data.is_admin,
+    };
+    setUser(u);
+    persistUser(u);
+    return data;
+  }, [persistUser]);
+
+  const signup = useCallback(async (username, password) => {
+    const data = await authApi.signup(username, password);
+    const u = {
+      id: data.user_id,
+      username: data.username,
+      is_admin: !!data.is_admin,
+    };
+    setUser(u);
+    persistUser(u);
+    return data;
+  }, [persistUser]);
+
+  const logout = useCallback(async () => {
+    await authApi.logout();
+    setUser(null);
+    persistUser(null);
+  }, [persistUser]);
+
+  const value = useMemo(
+    () => ({ user, initializing, login, signup, logout, refresh }),
+    [user, initializing, login, signup, logout, refresh]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => useContext(AuthContext);

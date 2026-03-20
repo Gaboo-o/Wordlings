@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import * as wordsApi from '../api/words';
-import { useAuth } from '../context/AuthContext';
+import { getErrorMessage } from '../api/errors';
 import GalaxyShell from '../components/layout/GalaxyShell';
 
 /*
@@ -15,13 +15,10 @@ import GalaxyShell from '../components/layout/GalaxyShell';
 */
 export default function Submissions() {
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const isLoggedIn = !!user;
 
   /*
     statusVariant
@@ -41,25 +38,27 @@ export default function Submissions() {
     This expects an API function named fetchMySubmissions().
     If your API uses a different endpoint/name, update ../api/words accordingly.
   */
-  const load = async () => {
+  const load = async (signal) => {
     setLoading(true);
     setError('');
     try {
-      const data = await wordsApi.fetchSubmissions();
+      const data = await wordsApi.fetchSubmissions({ signal });
       setItems(Array.isArray(data) ? data : []);
     } catch (e) {
+      if (e?.code === 'CANCELED') return;
       console.error('Failed to load submissions:', e);
       setItems([]);
-      setError(e?.message || 'Failed to load submissions');
+      setError(getErrorMessage(e, 'Failed to load submissions'));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!isLoggedIn) return;
-    load();
-  }, [isLoggedIn]);
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, []);
 
   /*
     sorted
@@ -77,27 +76,6 @@ export default function Submissions() {
     return [...items].sort((a, b) => rank(a.status) - rank(b.status));
   }, [items]);
 
-  if (!isLoggedIn) {
-    return (
-      <GalaxyShell variant="auth">
-        <div className="centered">
-          <div className="app-card">
-            <h2>My Submissions</h2>
-            <p className="muted">You must be logged in to view your submissions.</p>
-            <div className="row-wrap">
-              <button className="app-button" type="button" onClick={() => navigate('/login')}>
-                Go to Login
-              </button>
-              <button className="app-button app-button--secondary" type="button" onClick={() => navigate('/')}>
-                Back to Home
-              </button>
-            </div>
-          </div>
-        </div>
-      </GalaxyShell>
-    );
-  }
-
   return (
     <GalaxyShell>
       <div className="page">
@@ -113,7 +91,7 @@ export default function Submissions() {
                 <button className="app-button app-button--secondary" type="button" onClick={() => navigate('/add')}>
                   Submit a Word
                 </button>
-                <button className="app-button" type="button" onClick={load} disabled={loading}>
+                <button className="app-button" type="button" onClick={() => load()} disabled={loading}>
                   Refresh
                 </button>
               </div>

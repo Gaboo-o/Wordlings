@@ -1,0 +1,67 @@
+/*
+  Pumpkin theme component overrides.
+  Keep overrides scoped under :root[data-theme='pumpkin'] to avoid affecting other themes.
+*/
+
+:root[data-theme='pumpkin'] .galaxy-shell {
+  /* Slightly warmer starfield */
+  --stars-opacity-1: 0.50;
+  --stars-opacity-2: 0.74;
+}
+
+/* Meteors */
+:root[data-theme='pumpkin'] .fly-object--meteor {
+  background:
+    radial-gradient(
+      circle at 30% 30%,
+      rgba(255, 243, 226, 0.95),
+      rgba(255, 154, 60, 0.55) 55%,
+      rgba(0, 0, 0, 0.00) 72%
+    );
+  box-shadow:
+    0 0 12px rgba(255, 228, 184, 0.18),
+    0 0 22px rgba(255, 154, 60, 0.16);
+}
+
+:root[data-theme='pumpkin'] .fly-item--right .fly-object--meteor::before {
+  background: linear-gradient(to left, rgba(255, 203, 140, 0.72), rgba(255, 203, 140, 0.0));
+}
+
+:root[data-theme='pumpkin'] .fly-item--left .fly-object--meteor::before {
+  background: linear-gradient(to right, rgba(255, 203, 140, 0.72), rgba(255, 203, 140, 0.0));
+}
+
+/* Ships */
+:root[data-theme='pumpkin'] .fly-object--ship {
+  border-color: rgba(255, 203, 140, 0.34);
+  background: linear-gradient(90deg, rgba(255, 243, 226, 0.10), rgba(255, 154, 60, 0.30));
+  box-shadow:
+    0 0 14px rgba(255, 154, 60, 0.22),
+    0 0 20px rgba(255, 243, 226, 0.10);
+}
+
+:root[data-theme='pumpkin'] .fly-item--right .fly-object--ship::before {
+  border-left-color: rgba(255, 154, 60, 0.55);
+}
+
+:root[data-theme='pumpkin'] .fly-item--left .fly-object--ship::before {
+  border-right-color: rgba(255, 154, 60, 0.55);
+}
+
+/* Orbit menu planet */
+:root[data-theme='pumpkin'] .orbit-menu__planet {
+  border-color: rgba(255, 203, 140, 0.26);
+  background:
+    radial-gradient(circle at 35% 35%, rgba(255, 243, 226, 0.16), transparent 55%),
+    radial-gradient(circle at 25% 25%, rgba(255, 154, 60, 0.92), rgba(0, 0, 0, 0.55));
+  box-shadow: 0 0 18px rgba(255, 154, 60, 0.38);
+}
+
+/* Brand */
+:root[data-theme='pumpkin'] .brand-mark {
+  border-color: rgba(255, 203, 140, 0.26);
+  background:
+    radial-gradient(circle at 35% 35%, rgba(255, 243, 226, 0.18), transparent 55%),
+    radial-gradient(circle at 25% 25%, rgba(255, 154, 60, 0.90), rgba(0, 0, 0, 0.45));
+  box-shadow: 0 0 14px rgba(255, 154, 60, 0.36);
+}

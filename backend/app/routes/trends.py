@@ -1,40 +1,18 @@
-from flask import Blueprint, jsonify
-from pytrends.request import TrendReq
+from flask import Blueprint
+from app.services.trends_service import fetch_trends
+from app.utils.responses import success, error
 from app import limiter
 
 trends_bp = Blueprint('trends', __name__)
-pytrends = TrendReq(hl='en-US', tz=360, timeout=(5, 10))
 
 @trends_bp.route('/<word>', methods=['GET'])
-@limiter.limit("60/minute")     # analytics calls can spike but still cap
+@limiter.limit("60/minute")
 def get_trend(word):
     try:
-        pytrends = TrendReq(hl='en-US', tz=360)
-        kw_list = [word]
-
-        # Fetch interest over time (last 5 years)
-        pytrends.build_payload(kw_list, cat=0, timeframe='today 5-y', geo='', gprop='')
-
-        # Interest over time
-        data = pytrends.interest_over_time()
-        if data.empty:
-            return jsonify({"trend": [], "topRegion": None})
-
-        trend_data = [
-            {"date": date.strftime("%Y-%m"), "value": int(row[word])}
-            for date, row in data.iterrows()
-        ]
-
-        # Get region data (interest by country)
-        region_data = pytrends.interest_by_region(resolution='COUNTRY', inc_low_vol=True)
-        top_region = (
-            region_data[word].idxmax()
-            if not region_data.empty and word in region_data
-            else None
-        )
-
-        return jsonify({"trend": trend_data, "topRegion": top_region})
-
-    except Exception as e:
-        print("Error fetching Google Trends data:", e)
-        return jsonify({"error": str(e)}), 500
+        trend_data, top_region = fetch_trends(word)
+        return success({
+            "trend": trend_data,
+            "topRegion": top_region
+        })
+    except Exception:
+        return error("Failed to fetch trends", 500)

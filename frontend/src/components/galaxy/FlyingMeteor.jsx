@@ -6,8 +6,8 @@ import MeteorBody from '../../icons/MeteorBody';
   Animates a single meteor label moving horizontally across the screen.
 
   Contract:
-  - Calls `onDone()` once the meteor moves out of bounds.
-  - Calls `onPos({x,y})` each frame if provided (intended for debugging only).
+  - Calls `onDone(meteorId)` once the meteor moves out of bounds.
+  - Calls `onPos(meteorId, {x,y}, meteor)` each frame if provided (intended for debugging only).
   - Calls `onSelect(meteor)` when clicked.
 */
 export default function FlyingMeteor({
@@ -46,13 +46,13 @@ export default function FlyingMeteor({
         ref.current.style.top = `${pos.current.y}px`;
 
         // Optional callback for debug sampling.
-        onPos?.(pos.current);
+        onPos?.(meteor.id, pos.current, meteor);
 
         // Despawn once sufficiently off-screen.
         const leftBound = -despawnMarginPx;
         const rightBound = window.innerWidth + despawnMarginPx;
         if (pos.current.x < leftBound || pos.current.x > rightBound) {
-          onDone?.();
+          onDone?.(meteor.id);
           return;
         }
       }
@@ -63,8 +63,6 @@ export default function FlyingMeteor({
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
   }, [despawnMarginPx, meteor.vx, onDone, onPos, pausedRef]);
-
-  const Body = meteor.variant === "ship" ? MeteorBody : MeteorBody; //add ship body later
 
   // Use a button for a reliable, clickable hitbox.
   // Styling removes default button appearance.
@@ -79,17 +77,13 @@ export default function FlyingMeteor({
         '--fly-size': `${Number(meteor.sizePx) || 24}px`,
       }}
       
-      // inside the return button:
-      onClick={() => {
-      console.log('flying meteor clicked:', meteor.id, meteor.word);
-      onSelect?.(meteor);
-}}
+      onClick={() => onSelect?.(meteor)}
 
       aria-label={meteor.word}
       title={`id=${meteor.wordId}`}
     >
       <span className="fly-visual" aria-hidden="true">
-        <Body className="fly-body" />
+        <MeteorBody className="fly-body" />
       </span>
 
       <span className="fly-label">{meteor.word}</span>

@@ -1,3 +1,4 @@
+// frontend/src/pages/WordPage.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -15,18 +16,10 @@ import {
   YAxis,
 } from "recharts";
 
-/*
-  Local constants
-*/
 const SIMILAR_LIMIT = 12;
 const TRENDING_THRESHOLD = 70;
 const TREND_CHART_HEIGHT_PX = 300;
 
-/*
-  SimilarOrbit
-  Renders the current word as a center "planet" with similar words around it on orbit rings.
-  Attempts to reduce overlap by enforcing minimum angular spacing + pushing outward on collisions.
-*/
 function SimilarOrbit({ centerWord, items = [], onSelect }) {
   const SIZE = 420;
   const CENTER = SIZE / 2;
@@ -40,7 +33,6 @@ function SimilarOrbit({ centerWord, items = [], onSelect }) {
   const PUSH_STEP = 8;
 
   const rings = [BASE_RADIUS, BASE_RADIUS + 55, BASE_RADIUS + 115];
-
   const safe = Array.isArray(items) ? items.slice(0, 12) : [];
 
   const placed = safe
@@ -48,12 +40,7 @@ function SimilarOrbit({ centerWord, items = [], onSelect }) {
       const s = typeof it.score === "number" ? it.score : 0.5;
       const targetR = BASE_RADIUS + (1 - s) * RADIUS_SPREAD;
       const angleDeg = (i / Math.max(1, safe.length)) * 360;
-
-      return {
-        ...it,
-        _targetR: targetR,
-        _angleDeg: angleDeg,
-      };
+      return { ...it, _targetR: targetR, _angleDeg: angleDeg };
     })
     .sort((a, b) => a._targetR - b._targetR);
 
@@ -75,8 +62,7 @@ function SimilarOrbit({ centerWord, items = [], onSelect }) {
       angle = (angle + MIN_ANGLE_GAP_DEG) % 360;
     }
 
-    let r =
-      it._targetR + final.length * (MIN_RADIUS_STEP / Math.max(1, safe.length));
+    let r = it._targetR + final.length * (MIN_RADIUS_STEP / Math.max(1, safe.length));
 
     const posFor = (rr, aa) => {
       const t = deg2rad(aa);
@@ -103,13 +89,7 @@ function SimilarOrbit({ centerWord, items = [], onSelect }) {
     const p = posFor(r, angle);
 
     takenAngles.push(angle);
-    final.push({
-      ...it,
-      _angleDeg: angle,
-      _r: r,
-      _x: p.x,
-      _y: p.y,
-    });
+    final.push({ ...it, _angleDeg: angle, _r: r, _x: p.x, _y: p.y });
   }
 
   return (
@@ -170,9 +150,7 @@ function SimilarOrbit({ centerWord, items = [], onSelect }) {
             type="button"
             className="chip"
             onClick={() => onSelect?.(it.id)}
-            title={`similarity: ${
-              typeof it.score === "number" ? it.score.toFixed(2) : "?"
-            }`}
+            title={`similarity: ${typeof it.score === "number" ? it.score.toFixed(2) : "?"}`}
             style={{
               position: "absolute",
               left: it._x,
@@ -194,10 +172,19 @@ function SimilarOrbit({ centerWord, items = [], onSelect }) {
   );
 }
 
+function parseNumericId(raw) {
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
 export default function WordPage() {
-  const { id } = useParams();
+  const { id: rawParam } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const numericId = parseNumericId(rawParam);
+  const wordSlug = numericId == null ? rawParam : null;
 
   const [word, setWord] = useState(null);
   const [similar, setSimilar] = useState([]);
@@ -207,7 +194,7 @@ export default function WordPage() {
   const isLoggedIn = !!user;
 
   useEffect(() => {
-    if (!id) return;
+    if (!rawParam) return;
 
     let mounted = true;
 
@@ -216,12 +203,20 @@ export default function WordPage() {
       setError("");
 
       try {
-        const data = await wordsApi.fetchWordById(id);
-        const wordData = Array.isArray(data) ? data[0] : data;
+        let wordData = null;
+
+        if (numericId != null) {
+          const data = await wordsApi.fetchWordById(numericId);
+          wordData = Array.isArray(data) ? data[0] : data;
+        } else {
+          const data = await wordsApi.fetchWordByText(wordSlug);
+          wordData = Array.isArray(data) ? data[0] : data;
+        }
 
         if (!mounted) return;
         setWord(wordData || null);
 
+        // Trends (by word text)
         if (wordData?.word && wordsApi.fetchTrends) {
           try {
             const t = await wordsApi.fetchTrends(wordData.word);
@@ -237,17 +232,17 @@ export default function WordPage() {
           }
         }
 
-        if (wordsApi.fetchSimilar) {
+        // Similar only if we have a numeric id
+        if (numericId != null && wordsApi.fetchSimilar) {
           try {
-            const sims = await wordsApi.fetchSimilar({
-              wordId: Number(id),
-              limit: SIMILAR_LIMIT,
-            });
+            const sims = await wordsApi.fetchSimilar({ wordId: numericId, limit: SIMILAR_LIMIT });
             if (mounted) setSimilar(Array.isArray(sims) ? sims : []);
           } catch (e) {
             console.warn("Similar fetch failed:", e);
             if (mounted) setSimilar([]);
           }
+        } else {
+          setSimilar([]);
         }
       } catch (e) {
         console.error("WordPage load error:", e);
@@ -266,7 +261,7 @@ export default function WordPage() {
     return () => {
       mounted = false;
     };
-  }, [id]);
+  }, [rawParam, numericId, wordSlug]);
 
   const handleUpvote = async () => {
     if (!word) return;
@@ -281,7 +276,7 @@ export default function WordPage() {
       const prevUpvotes = word.upvotes || 0;
       setWord({ ...word, upvotes: prevUpvotes + 1, user_has_upvoted: true });
 
-      const res = await wordsApi.upvoteWord(word.id);
+      const res = await wordsApi.upvoteWord({ id: word.id });
       setWord((current) =>
         current
           ? {
@@ -295,11 +290,7 @@ export default function WordPage() {
       console.error("Upvote failed:", e);
       setWord((current) =>
         current
-          ? {
-              ...current,
-              upvotes: Math.max(0, (current.upvotes || 1) - 1),
-              user_has_upvoted: false,
-            }
+          ? { ...current, upvotes: Math.max(0, (current.upvotes || 1) - 1), user_has_upvoted: false }
           : current
       );
     }
@@ -307,44 +298,28 @@ export default function WordPage() {
 
   const trendLabel = useMemo(() => {
     if (!word) return null;
-    if (
-      typeof word.trend_score === "number" &&
-      word.trend_score >= TRENDING_THRESHOLD
-    ) {
+    if (typeof word.trend_score === "number" && word.trend_score >= TRENDING_THRESHOLD) {
       return <span className="status-pill status-pill--trending">Trending</span>;
     }
     return null;
   }, [word]);
 
-  // Normalize similarity scores into [0..1] where 1 is most similar.
   const orbitItems = useMemo(() => {
     const sims = Array.isArray(similar) ? similar : [];
     if (!sims.length) return [];
 
-    const scores = sims
-      .map((s) => Number(s.score))
-      .filter((n) => Number.isFinite(n));
-
-    if (!scores.length) {
-      return sims.map((s) => ({ ...s, score: 0.5 }));
-    }
+    const scores = sims.map((s) => Number(s.score)).filter((n) => Number.isFinite(n));
+    if (!scores.length) return sims.map((s) => ({ ...s, score: 0.5 }));
 
     const min = Math.min(...scores);
     const max = Math.max(...scores);
-
-    // If all scores are equal, just give everyone a mid similarity.
-    if (max - min < 1e-9) {
-      return sims.map((s) => ({ ...s, score: 0.5 }));
-    }
+    if (max - min < 1e-9) return sims.map((s) => ({ ...s, score: 0.5 }));
 
     return sims.map((s) => {
       const v = Number(s.score);
       if (!Number.isFinite(v)) return { ...s, score: 0.5 };
-
-      // Your API example: lower score seems more similar.
-      // So invert so that "more similar" => higher normalized score.
-      const norm = (v - min) / (max - min); // 0..1
-      const similarity = 1 - norm; // 1 = best
+      const norm = (v - min) / (max - min);
+      const similarity = 1 - norm;
       return { ...s, score: similarity };
     });
   }, [similar]);
@@ -403,11 +378,7 @@ export default function WordPage() {
                 >
                   Upvote ({word.upvotes ?? 0})
                 </button>
-                <button
-                  className="app-button app-button--secondary"
-                  type="button"
-                  onClick={() => navigate("/")}
-                >
+                <button className="app-button app-button--secondary" type="button" onClick={() => navigate("/")}>
                   Back
                 </button>
               </div>
@@ -416,16 +387,12 @@ export default function WordPage() {
             <div className="stack" style={{ marginTop: 16 }}>
               <div className="item-card">
                 <strong>Definition</strong>
-                <p style={{ marginBottom: 0 }}>
-                  {word.definition || "No definition provided."}
-                </p>
+                <p style={{ marginBottom: 0 }}>{word.definition || "No definition provided."}</p>
               </div>
 
               <div className="item-card">
                 <strong>Examples</strong>
-                <p style={{ marginBottom: 0 }}>
-                  {word.examples || "No examples provided."}
-                </p>
+                <p style={{ marginBottom: 0 }}>{word.examples || "No examples provided."}</p>
               </div>
 
               <div className="item-card">
@@ -450,25 +417,14 @@ export default function WordPage() {
               <div className="item-card">
                 <strong>Trend</strong>
                 {Array.isArray(word.trend) && word.trend.length > 0 ? (
-                  <div
-                    style={{
-                      width: "100%",
-                      height: TREND_CHART_HEIGHT_PX,
-                      marginTop: 12,
-                    }}
-                  >
+                  <div style={{ width: "100%", height: TREND_CHART_HEIGHT_PX, marginTop: 12 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={word.trend}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="date" tick={{ fill: "white" }} />
                         <YAxis tick={{ fill: "white" }} />
                         <Tooltip />
-                        <Line
-                          type="monotone"
-                          dataKey="value"
-                          stroke="var(--color-accent)"
-                          strokeWidth={2}
-                        />
+                        <Line type="monotone" dataKey="value" stroke="var(--color-accent)" strokeWidth={2} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>

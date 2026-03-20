@@ -1,0 +1,17 @@
+/*
+  Pumpkin theme tokens (Halloween)
+  Activate by setting: document.documentElement.dataset.theme = 'pumpkin'
+*/
+
+:root[data-theme='pumpkin'] {
+  --color-bg: #07040a;
+  --color-text: #fff8ef;
+  --color-muted: rgba(255, 248, 239, 0.78);
+  --color-card-bg: rgba(255, 154, 60, 0.10);
+  --color-border: rgba(255, 154, 60, 0.26);
+  --color-accent: #ff9a3c;
+  --color-danger: #ff5a7a;
+
+  /* A slightly punchier shadow so cards pop on the warmer palette */
+  --shadow-soft: 0 12px 34px rgba(0, 0, 0, 0.45);
+}
